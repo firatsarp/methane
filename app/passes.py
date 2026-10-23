@@ -77,6 +77,7 @@ def compute_passes(hours=72, step_s=20):
         inside = (lon >= x0) & (lon <= x1) & (lat >= y0) & (lat <= y1)
         edges = np.diff(np.concatenate([[0], inside.astype(int), [0]]))
         for a, b in zip(np.where(edges == 1)[0], np.where(edges == -1)[0]):
+            a, b = int(a), int(b)  # timedelta numpy tamsayısı kabul etmiyor
             seg = slice(a, b)
             d2 = (lon[seg] - ANKARA[0]) ** 2 + (lat[seg] - ANKARA[1]) ** 2
             c = a + int(np.argmin(d2))
