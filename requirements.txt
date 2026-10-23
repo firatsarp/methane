@@ -1,0 +1,7 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+apscheduler>=3.10,<4
+earthaccess>=0.12,<1
+netCDF4>=1.7,<2
+numpy>=1.26,<3
+skyfield>=1.49,<2

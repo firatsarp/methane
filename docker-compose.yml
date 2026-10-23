@@ -1,0 +1,15 @@
+services:
+  metan:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      - EARTHDATA_USERNAME=${EARTHDATA_USERNAME}
+      - EARTHDATA_PASSWORD=${EARTHDATA_PASSWORD}
+      - BACKFILL_DAYS=${BACKFILL_DAYS:-14}
+    volumes:
+      - metan-data:/data
+
+volumes:
+  metan-data:
