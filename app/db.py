@@ -25,15 +25,23 @@ CREATE TABLE IF NOT EXISTS cells (
     n INTEGER NOT NULL,
     PRIMARY KEY (day, source, j, i)
 );
-CREATE TABLE IF NOT EXISTS plumes (
+-- Eski NASA EMIT bulut tablosu, yerini Carbon Mapper aldı
+DROP TABLE IF EXISTS plumes;
+-- Carbon Mapper bulutları. Carbon Mapper tahmini yayımlamadıysa emission NULL.
+-- png süreli imzalı bir bağlantı olduğu için tablo her gün yenilenir. bounds: JSON [batı, güney, doğu, kuzey].
+CREATE TABLE IF NOT EXISTS cm_plumes (
     id TEXT PRIMARY KEY,
-    observed TEXT,
-    lat REAL,
-    lon REAL,
+    observed TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lon REAL NOT NULL,
     tr INTEGER NOT NULL,
-    max_ppmm REAL,
-    props TEXT,
-    geometry TEXT
+    emission REAL,
+    uncertainty REAL,
+    sector TEXT,
+    platform TEXT,
+    wind_speed REAL,
+    png TEXT,
+    bounds TEXT
 );
 CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,

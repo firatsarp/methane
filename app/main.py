@@ -24,8 +24,8 @@ async def lifespan(app):
     now = datetime.now(timezone.utc)
     scheduler.add_job(ingest.ingest_tropomi, "interval", minutes=INGEST_INTERVAL_MIN,
                       next_run_time=now + timedelta(seconds=5), id="tropomi", coalesce=True)
-    scheduler.add_job(ingest.ingest_emit, "interval", hours=24,
-                      next_run_time=now + timedelta(seconds=20), id="emit", coalesce=True)
+    scheduler.add_job(ingest.ingest_plumes, "interval", hours=24,
+                      next_run_time=now + timedelta(seconds=20), id="plumes", coalesce=True)
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -101,18 +101,19 @@ def tropomi(start: str, end: str | None = None, scope: str = Query("tr", pattern
 def plumes(scope: str = Query("tr", pattern="^(tr|all)$")):
     with db.read() as con:
         rows = con.execute(
-            "SELECT id, observed, lat, lon, max_ppmm, props, geometry FROM plumes WHERE (? = 'all' OR tr = 1) ORDER BY observed DESC",
+            """SELECT id, observed, lat, lon, emission, uncertainty, sector, platform, wind_speed, png, bounds
+               FROM cm_plumes WHERE (? = 'all' OR tr = 1) ORDER BY observed DESC""",
             (scope,),
         ).fetchall()
     features = []
-    for pid, observed, lat, lon, max_ppmm, props, geometry in rows:
+    for pid, observed, lat, lon, emission, uncertainty, sector, platform, wind_speed, png, bounds in rows:
         features.append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [lon, lat]},
             "properties": {
-                "id": pid, "observed": observed, "max_ppmm": max_ppmm,
-                "details": json.loads(props or "{}"),
-                "outline": json.loads(geometry) if geometry else None,
+                "id": pid, "observed": observed, "emission": emission, "uncertainty": uncertainty,
+                "sector": sector, "platform": platform, "wind_speed": wind_speed,
+                "png": png, "bounds": json.loads(bounds) if bounds else None,
             },
         })
     return {"type": "FeatureCollection", "features": features}
@@ -133,11 +134,12 @@ def status():
     meta = db.get_meta()
     with db.read() as con:
         n_gran = con.execute("SELECT COUNT(*) FROM granules").fetchone()[0]
-        n_plumes = con.execute("SELECT COUNT(*) FROM plumes WHERE tr = 1").fetchone()[0]
+        n_plumes = con.execute("SELECT COUNT(*) FROM cm_plumes WHERE tr = 1").fetchone()[0]
     job = scheduler.get_job("tropomi")
     return {
         "auth": meta.get("auth", "unknown"),
         "tropomi_finished": meta.get("tropomi_finished"),
+        "plumes_finished": meta.get("plumes_finished"),
         "last_error": meta.get("last_error"),
         "granules": n_gran,
         "plumes": n_plumes,

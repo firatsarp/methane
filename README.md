@@ -5,7 +5,7 @@ Türkiye üzerindeki atmosferik metanı (CH₄) uydu verisinden haritalayan web 
 | Katman | Kaynak | Güncellik |
 |---|---|---|
 | Günlük metan haritası (0.1° grid, ppb) | Sentinel-5P TROPOMI CH₄ L2, NASA GES DISC üzerinden | Son 5 gün NRT (geçişten ~1 saat sonra), daha eskisi kesin (OFFL) ürün |
-| Metan bulutları (nokta kaynak) | NASA EMIT L2B CH4PLM v002 | Arşiv (katalog Eylül 2025'te bitiyor) |
+| Metan bulutları (plume, nokta kaynak) | [Carbon Mapper](https://data.carbonmapper.org/) kataloğu (Planet Tanager + NASA EMIT): görüntü, emisyon (kg/sa), sektör | Günde bir kez tamamen yenilenir |
 | Sonraki geçişler, anlık konum | CelesTrak TLE + Skyfield | 12 saatte bir yenilenir |
 
 Uygulama 90 dakikada bir NASA'ya yeni veri olup olmadığını sorar, yalnızca Türkiye kesitini işler ve
@@ -71,7 +71,7 @@ Ardından http://localhost:8000 (compose dosyasında yerelde `ports: ["8000:8000
 |---|---|
 | `GET /api/days` | İşlenmiş günler, Türkiye kapsama oranı ve ortalaması |
 | `GET /api/tropomi?start=YYYY-MM-DD&end=YYYY-MM-DD` | Grid hücreleri `[j, i, ppb, piksel]` ve istatistikler |
-| `GET /api/plumes` | EMIT metan bulutları (GeoJSON) |
+| `GET /api/plumes` | Carbon Mapper metan bulutları (GeoJSON; emisyon, sektör, görüntü bağlantısı ve sınırları) |
 | `GET /api/passes` | Önümüzdeki 72 saatteki Türkiye geçişleri |
 | `GET /api/positions` | Uyduların anlık konumu ve sonraki 100 dk'lık izi |
 | `GET /api/status` | Giriş durumu, son güncelleme, son hata |
@@ -80,5 +80,8 @@ Ardından http://localhost:8000 (compose dosyasında yerelde `ports: ["8000:8000
 
 - Değerler `methane_mixing_ratio_bias_corrected` değişkeninden, `qa_value > 0.5` filtresiyle alınır.
 - "Anomali" görünümü her hücrenin o anki Türkiye medyanından farkını gösterir. Yüksek rakımlı bölgelerde
-  (Doğu Anadolu) mutlak değerler sistematik olarak farklı olabilir; tekil sızıntı tespiti için EMIT katmanı daha uygundur.
+  (Doğu Anadolu) mutlak değerler sistematik olarak farklı olabilir; tekil sızıntı tespiti için bulut (plume) katmanı daha uygundur.
+- Bulut verisi Carbon Mapper'ın [kullanım koşullarına](https://carbonmapper.org/terms) tabidir: yalnızca ticari olmayan
+  kullanım ve kaynak gösterimi zorunlu. Görüntü bağlantıları imzalı ve süreli olduğu için katalog günde bir yenilenir;
+  görüntüler sunucuya indirilmez, tarayıcı doğrudan Carbon Mapper'dan yükler.
 - Sentinel-5P bir ESA/Copernicus uydusudur; veriyi NASA GES DISC arşivinden alıyoruz.

@@ -25,7 +25,10 @@ QA_MIN = 0.5
 
 TROPOMI_OFFL = ("S5P_L2__CH4____HiR", "2")
 TROPOMI_NRT = ("S5P_L2__CH4____HiR_NRT", "2")
-EMIT_PLUMES = ("EMITL2BCH4PLM", "002")
+
+# Carbon Mapper metan bulutu kataloğu (Planet Tanager + NASA EMIT). Herkese açık; ticari olmayan kullanım, kaynak gösterimi zorunlu.
+CARBONMAPPER_API = "https://api.carbonmapper.org/api/v1/catalog/plumes/annotated"
+CARBONMAPPER_PAGE = 1000
 
 # Yörünge tahmini yapılan uydular: ad, NORAD no, kapsama kutusu (Türkiye'yi görebildiği alt-nokta alanı)
 SATELLITES = {

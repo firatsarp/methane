@@ -94,6 +94,7 @@ footer p { margin: 0 0 6px; }
 .popup table { border-collapse: collapse; }
 .popup td { padding: 1px 8px 1px 0; vertical-align: top; }
 .popup td:first-child { color: var(--muted); }
+.popup a { color: var(--accent); }
 
 @media (max-width: 720px) {
   #panel {

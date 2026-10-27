@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Türkiye Metan İzleyici</title>
-  <meta name="description" content="Sentinel-5P TROPOMI ve NASA EMIT uydu verileriyle Türkiye üzerindeki metan (CH₄) ölçümleri.">
+  <meta name="description" content="Sentinel-5P TROPOMI ve Carbon Mapper uydu verileriyle Türkiye üzerindeki metan (CH₄) ölçümleri.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ed7953'/%3E%3Ctext x='16' y='21' font-size='13' text-anchor='middle' fill='%23111' font-family='sans-serif' font-weight='700'%3ECH4%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
@@ -58,13 +58,15 @@
     </section>
 
     <section>
-      <label class="toggle"><input type="checkbox" id="show-plumes" checked> NASA EMIT metan bulutları <span id="plume-count" class="muted"></span></label>
+      <label class="toggle"><input type="checkbox" id="show-plumes" checked> Metan bulutları (Carbon Mapper) <span id="plume-count" class="muted"></span></label>
+      <p class="hint">Daire boyutu: emisyon miktarı. Bulut görüntüleri için yakınlaştırın.</p>
       <label class="toggle"><input type="checkbox" id="show-sats" checked> Uyduların anlık konumu</label>
     </section>
 
     <footer>
       <p>Veri: <a href="https://disc.gsfc.nasa.gov/datasets/S5P_L2__CH4____HiR_2/summary" target="_blank" rel="noopener">Sentinel-5P TROPOMI CH₄</a> (ESA/Copernicus, NASA GES DISC),
-        <a href="https://earth.jpl.nasa.gov/emit/" target="_blank" rel="noopener">NASA EMIT</a>. Yörüngeler: CelesTrak.</p>
+        Metan bulutları: <a href="https://data.carbonmapper.org/" target="_blank" rel="noopener">Carbon Mapper</a> (Planet Tanager, NASA EMIT; ticari olmayan kullanım).
+        Yörüngeler: CelesTrak.</p>
       <p class="muted" id="status"></p>
     </footer>
   </aside>
