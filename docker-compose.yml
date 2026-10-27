@@ -7,7 +7,7 @@ services:
     environment:
       - EARTHDATA_USERNAME=${EARTHDATA_USERNAME}
       - EARTHDATA_PASSWORD=${EARTHDATA_PASSWORD}
-      - BACKFILL_DAYS=${BACKFILL_DAYS:-365}
+      - BACKFILL_DAYS=${BACKFILL_DAYS:-90}
     volumes:
       - metan-data:/data
 

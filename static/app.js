@@ -124,7 +124,7 @@ async function loadTropomi() {
   const day = state.days[state.dayIdx];
   $("daylabel").innerHTML = state.mode === "day"
     ? `${fmtDay(end)}<small>${day.source === "OFFL" ? "kesin ürün" : day.source === "NRTI" ? "hızlı ürün (NRT)" : "veri yok"}</small>`
-    : `${fmtDay(start)} – ${fmtDay(end)}<small>${state.mode === "365" ? "1 yıllık" : `${state.mode} günlük`} ortalama</small>`;
+    : `${fmtDay(start)} – ${fmtDay(end)}<small>${state.mode} günlük ortalama</small>`;
   $("prev").disabled = state.dayIdx <= 0;
   $("next").disabled = state.dayIdx >= state.days.length - 1;
   state.data = await api(`/api/tropomi?start=${start}&end=${end}`);
@@ -193,7 +193,7 @@ function renderSpark() {
   svg.innerHTML = h;
 }
 
-// Bir yıllık veride her günün tıklama alanı 1 pikselden dar; x konumuna en yakın verili gün seçilir
+// Aylarca veride her günün tıklama alanı birkaç piksele iniyor; x konumuna en yakın verili gün seçilir
 $("spark").addEventListener("click", (e) => {
   const n = state.days.length;
   if (!n) return;
