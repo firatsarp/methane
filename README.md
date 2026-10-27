@@ -45,16 +45,17 @@ Coolify kodu bir Git deposundan çeker. Bu klasörü bir GitHub deposuna (özel 
    |---|---|
    | `EARTHDATA_USERNAME` | Earthdata kullanıcı adınız |
    | `EARTHDATA_PASSWORD` | Earthdata şifreniz (Coolify'da gizli olarak işaretleyin) |
-   | `BACKFILL_DAYS` | `14` (isteğe bağlı; geriye kaç gün veri çekilsin) |
+   | `BACKFILL_DAYS` | `365` (isteğe bağlı; geriye kaç gün veri çekilsin) |
 5. **Deploy**.
 
 ## 5. Kontrol
 
 - `https://metan.sarpify.com/api/status` → `"auth": "ok"` görmelisiniz.
 - Coolify **Logs** ekranında `S5P_L2__CH4____HiR_NRT: N granül bulundu` satırları görünür.
-  İlk 14 günlük veri yaklaşık 10–20 dakikada iner.
+  Bir yıllık geçmiş (~790 dosya, toplam ~55 GB indirme; her dosya işlendikten sonra silinir) ilk açılışta
+  birkaç saatte iner.
 - Bulutlu günlerde Türkiye'nin büyük kısmı boş görünür. TROPOMI bulut altını ölçemez; bu normaldir.
-  7 veya 30 günlük ortalama daha dolu bir harita verir.
+  7, 30, 90 günlük veya 1 yıllık ortalama daha dolu bir harita verir.
 
 ## Yerel çalıştırma
 

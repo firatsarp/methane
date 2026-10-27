@@ -15,7 +15,7 @@ TMP_DIR = DATA_DIR / "tmp"
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 # Kaç gün geriye veri çekilsin (ilk açılışta ve her çalışmada kontrol edilir)
-BACKFILL_DAYS = int(os.environ.get("BACKFILL_DAYS", "14"))
+BACKFILL_DAYS = int(os.environ.get("BACKFILL_DAYS", "365"))
 # Son NRT_DAYS gün NRT (hızlı) üründen, daha eskisi OFFL (kesin) üründen alınır
 NRT_DAYS = int(os.environ.get("NRT_DAYS", "5"))
 INGEST_INTERVAL_MIN = int(os.environ.get("INGEST_INTERVAL_MIN", "90"))

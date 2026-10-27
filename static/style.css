@@ -53,6 +53,7 @@ a { color: #9cc7ff; }
 #spark .pt { fill: var(--accent); cursor: pointer; }
 #spark .pt.sel { fill: #fff; }
 #spark .hit { fill: transparent; cursor: pointer; }
+#spark .span { fill: var(--accent); opacity: .15; }
 
 #legend { margin-top: 12px; }
 #legend-bar { height: 10px; border-radius: 3px; }

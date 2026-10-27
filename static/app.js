@@ -124,7 +124,7 @@ async function loadTropomi() {
   const day = state.days[state.dayIdx];
   $("daylabel").innerHTML = state.mode === "day"
     ? `${fmtDay(end)}<small>${day.source === "OFFL" ? "kesin ürün" : day.source === "NRTI" ? "hızlı ürün (NRT)" : "veri yok"}</small>`
-    : `${fmtDay(start)} – ${fmtDay(end)}<small>${state.mode} günlük ortalama</small>`;
+    : `${fmtDay(start)} – ${fmtDay(end)}<small>${state.mode === "365" ? "1 yıllık" : `${state.mode} günlük`} ortalama</small>`;
   $("prev").disabled = state.dayIdx <= 0;
   $("next").disabled = state.dayIdx >= state.days.length - 1;
   state.data = await api(`/api/tropomi?start=${start}&end=${end}`);
@@ -179,7 +179,13 @@ function renderSpark() {
   const n = state.days.length;
   const X = (k) => 6 + (k / Math.max(1, n - 1)) * 288;
   const Y = (v) => 50 - ((v - lo) / (hi - lo)) * 44;
-  let h = `<polyline class="line" points="${pts.map((p) => `${X(p.k)},${Y(p.v)}`).join(" ")}"/>`;
+  let h = "";
+  if (state.mode !== "day") {
+    const [start] = range();
+    const k0 = Math.max(0, state.days.findIndex((d) => d.day >= start));
+    h += `<rect class="span" x="${X(k0)}" y="0" width="${Math.max(1, X(state.dayIdx) - X(k0))}" height="56"/>`;
+  }
+  h += `<polyline class="line" points="${pts.map((p) => `${X(p.k)},${Y(p.v)}`).join(" ")}"/>`;
   for (const p of pts) {
     h += `<circle class="pt${p.k === state.dayIdx ? " sel" : ""}" cx="${X(p.k)}" cy="${Y(p.v)}" r="${p.k === state.dayIdx ? 3.5 : 2}"/>`;
     h += `<rect class="hit" data-k="${p.k}" x="${X(p.k) - 288 / n / 2}" y="0" width="${288 / n}" height="56"><title>${fmtDay(state.days[p.k].day)}: ${fmtNum(p.v, 1)} ppb</title></rect>`;
@@ -187,9 +193,18 @@ function renderSpark() {
   svg.innerHTML = h;
 }
 
+// Bir yıllık veride her günün tıklama alanı 1 pikselden dar; x konumuna en yakın verili gün seçilir
 $("spark").addEventListener("click", (e) => {
-  const k = e.target.dataset?.k;
-  if (k != null) { state.dayIdx = Number(k); loadTropomi(); }
+  const n = state.days.length;
+  if (!n) return;
+  const box = $("spark").getBoundingClientRect();
+  const x = ((e.clientX - box.left) / box.width) * 300;
+  const target = ((x - 6) / 288) * Math.max(1, n - 1);
+  let best = -1;
+  state.days.forEach((d, k) => {
+    if (d.mean != null && (best < 0 || Math.abs(k - target) < Math.abs(best - target))) best = k;
+  });
+  if (best >= 0) { state.dayIdx = best; loadTropomi(); }
 });
 $("prev").onclick = () => { state.dayIdx--; loadTropomi(); };
 $("next").onclick = () => { state.dayIdx++; loadTropomi(); };
