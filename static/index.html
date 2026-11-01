@@ -8,28 +8,37 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ed7953'/%3E%3Ctext x='16' y='21' font-size='13' text-anchor='middle' fill='%23111' font-family='sans-serif' font-weight='700'%3ECH4%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
+  <script src="/metan-bilimsel-icerik/metan-icerik.js" defer></script>
 </head>
 <body>
-  <div id="map"></div>
+  <div id="map" role="region" aria-label="Metan haritası"></div>
 
-  <aside id="panel">
+  <aside id="panel" aria-label="Kontrol paneli">
     <header>
       <h1>Türkiye Metan İzleyici</h1>
       <p class="sub">Uydudan ölçülen atmosferik metan (CH₄)</p>
+      <nav class="sitenav" aria-label="Ana gezinme">
+        <a href="/uydular-nasil-olcer.html">Ölçümün mantığı</a>
+        <a href="/seymen.html">Seymen</a>
+        <a href="/uydular-nasil-olcer.html#kavramlar">Kavramlar</a>
+      </nav>
     </header>
+
+    <div class="pinned-note"><metan-seymen-notu></metan-seymen-notu></div>
 
     <div id="banner" class="banner" hidden></div>
 
-    <section>
-      <div class="seg" id="mode">
-        <button data-mode="day" class="on">Gün</button>
-        <button data-mode="7">7 g</button>
-        <button data-mode="30">30 g</button>
-        <button data-mode="90">90 g</button>
+    <section aria-labelledby="h-tropomi">
+      <h2 id="h-tropomi">Atmosferik metan · TROPOMI XCH₄</h2>
+      <div class="seg" id="mode" role="group" aria-label="Dönem">
+        <button data-mode="day" class="on" aria-pressed="true">Gün</button>
+        <button data-mode="7" aria-pressed="false">7 g</button>
+        <button data-mode="30" aria-pressed="false">30 g</button>
+        <button data-mode="90" aria-pressed="false">90 g</button>
       </div>
       <div class="daynav">
         <button id="prev" aria-label="Önceki gün">‹</button>
-        <div id="daylabel">Veri bekleniyor…</div>
+        <div id="daylabel" aria-live="polite">Veri bekleniyor…</div>
         <button id="next" aria-label="Sonraki gün">›</button>
       </div>
       <svg id="spark" viewBox="0 0 300 56" preserveAspectRatio="none" aria-label="Günlük Türkiye ortalaması"></svg>
@@ -37,9 +46,9 @@
     </section>
 
     <section>
-      <div class="seg" id="view">
-        <button data-view="abs" class="on">Mutlak (ppb)</button>
-        <button data-view="anom">Anomali</button>
+      <div class="seg" id="view" role="group" aria-label="Görünüm">
+        <button data-view="abs" class="on" aria-pressed="true">Mutlak (ppb)</button>
+        <button data-view="anom" aria-pressed="false">Anomali</button>
       </div>
       <div id="legend">
         <div id="legend-bar"></div>
@@ -50,17 +59,56 @@
         <div><dt>En yüksek</dt><dd id="st-max">–</dd></div>
         <div><dt>Kapsama</dt><dd id="st-cov">–</dd></div>
       </dl>
+      <p class="hint">Sütun ortalaması (ppb); yer seviyesi konsantrasyonu veya tesis emisyonu değildir. Veri olmayan hücreler sıfır sayılmaz.</p>
     </section>
 
-    <section>
-      <h2>Sonraki geçişler</h2>
+    <section aria-labelledby="h-plumes">
+      <h2 id="h-plumes">Metan bulutları · emisyon tahmini</h2>
+      <label class="toggle"><input type="checkbox" id="show-plumes" checked> Haritada göster <span id="plume-count" class="muted"></span></label>
+      <div class="filters">
+        <label>Sektör
+          <select id="f-sector"><option value="">Tümü</option></select>
+        </label>
+        <label>Sensör
+          <select id="f-sensor"><option value="">Tümü</option></select>
+        </label>
+        <label>Gözlem dönemi
+          <select id="f-period">
+            <option value="">Tümü</option>
+            <option value="30">Son 30 gün</option>
+            <option value="90">Son 90 gün</option>
+            <option value="365">Son 1 yıl</option>
+          </select>
+        </label>
+        <label>Sıralama
+          <select id="f-sort">
+            <option value="observed">En yeni gözlem</option>
+            <option value="published">En yeni yayımlanan</option>
+            <option value="emission">En yüksek emisyon tahmini</option>
+          </select>
+        </label>
+        <label class="toggle wide"><input type="checkbox" id="f-emission"> Yalnızca emisyon tahmini yayımlananlar</label>
+      </div>
+      <p class="hint" id="plume-summary" aria-live="polite"></p>
+      <ul id="plume-list" class="plume-list"></ul>
+      <button id="plume-more" class="more" hidden>Daha fazla göster</button>
+      <p class="hint">Daire boyutu: emisyon tahmini. Bulut görüntüleri için yakınlaştırın. Listede olmayan yer, bulut olmadığı anlamına gelmez.</p>
+    </section>
+
+    <section aria-labelledby="h-alerts">
+      <h2 id="h-alerts">Uyarılar</h2>
+      <ul id="alerts" class="alerts"><li class="muted">Yükleniyor…</li></ul>
+    </section>
+
+    <section aria-labelledby="h-passes">
+      <h2 id="h-passes">Sonraki geçişler</h2>
       <ul id="passes"><li class="muted">Hesaplanıyor…</li></ul>
+      <label class="toggle"><input type="checkbox" id="show-sats" checked> Uyduların anlık konumu</label>
     </section>
 
-    <section>
-      <label class="toggle"><input type="checkbox" id="show-plumes" checked> Metan bulutları (Carbon Mapper) <span id="plume-count" class="muted"></span></label>
-      <p class="hint">Daire boyutu: emisyon miktarı. Bulut görüntüleri için yakınlaştırın.</p>
-      <label class="toggle"><input type="checkbox" id="show-sats" checked> Uyduların anlık konumu</label>
+    <section aria-labelledby="h-sources">
+      <h2 id="h-sources">Veri kaynakları</h2>
+      <ul id="sources" class="sources"><li class="muted">Yükleniyor…</li></ul>
     </section>
 
     <footer>
@@ -69,6 +117,37 @@
         Yörüngeler: CelesTrak.</p>
       <p class="muted" id="status"></p>
     </footer>
+  </aside>
+
+  <aside id="detail" class="detail" aria-labelledby="detail-title" hidden>
+    <header class="detail-head">
+      <div>
+        <h2 id="detail-title" tabindex="-1">Metan bulutu</h2>
+        <p class="muted" id="detail-id"></p>
+      </div>
+      <button id="detail-close" class="icon-btn" aria-label="Detayı kapat">×</button>
+    </header>
+    <dl class="fields">
+      <div>
+        <dt>Metan artışı</dt>
+        <dd id="d-enh"></dd>
+      </div>
+      <div>
+        <dt>Emisyon tahmini (bu gözlem)</dt>
+        <dd id="d-emi"></dd>
+      </div>
+      <div>
+        <dt>Kaynak ortalaması</dt>
+        <dd id="d-src"></dd>
+      </div>
+    </dl>
+    <div class="detail-actions">
+      <button id="d-zoom" class="more">Haritada yakınlaştır</button>
+      <a id="d-link" target="_blank" rel="noopener">Carbon Mapper'da aç ↗</a>
+    </div>
+    <metan-olcum-aciklamasi id="plume-note"></metan-olcum-aciklamasi>
+    <h3 class="detail-sub">Belirsizlik nasıl okunmalı?</h3>
+    <metan-kavramlar konu="belirsizlik"></metan-kavramlar>
   </aside>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>

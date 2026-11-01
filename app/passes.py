@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 from skyfield.api import EarthSatellite, load, wgs84
 
+from . import sources
 from .config import DATA_DIR, SATELLITES
 
 log = logging.getLogger("passes")
@@ -36,8 +37,12 @@ def _fetch_tle(norad):
             if text.count("\n") >= 2 and text.lstrip().split("\n")[1].startswith("1 "):
                 DATA_DIR.mkdir(parents=True, exist_ok=True)
                 path.write_text(text)
+                sources.succeeded("celestrak")
+            else:
+                sources.failed("celestrak", f"NORAD {norad}: beklenmeyen TLE yanıtı")
         except Exception as e:
             log.warning("TLE alınamadı (%s): %s", norad, e)
+            sources.failed("celestrak", f"NORAD {norad}: {e}")
     if not path.exists():
         return None
     lines = [l.rstrip() for l in path.read_text().splitlines() if l.strip()]

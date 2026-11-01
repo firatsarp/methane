@@ -8,6 +8,14 @@ services:
       - EARTHDATA_USERNAME=${EARTHDATA_USERNAME}
       - EARTHDATA_PASSWORD=${EARTHDATA_PASSWORD}
       - BACKFILL_DAYS=${BACKFILL_DAYS:-90}
+      # Gizli değerler yalnızca Coolify ortam değişkenlerinde tutulur; tarayıcıya gönderilmez
+      - EARTHDATA_TOKEN=${EARTHDATA_TOKEN:-}
+      - CARBON_MAPPER_API_TOKEN=${CARBON_MAPPER_API_TOKEN:-}
+      # Henüz veri akışına bağlı değil; /api/sources yalnızca tanımlı olup olmadıklarını gösterir
+      - CDSE_CLIENT_ID=${CDSE_CLIENT_ID:-}
+      - CDSE_CLIENT_SECRET=${CDSE_CLIENT_SECRET:-}
+      - CDSAPI_URL=${CDSAPI_URL:-https://cds.climate.copernicus.eu/api}
+      - CDSAPI_KEY=${CDSAPI_KEY:-}
     volumes:
       - metan-data:/data
 

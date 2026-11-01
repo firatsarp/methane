@@ -109,7 +109,7 @@ map.on("load", async () => {
         <tr><td>Piksel sayısı</td><td>${p.n}</td></tr>
         <tr><td>Konum</td><td>${fmtNum(p.lat, 2)}°K, ${fmtNum(p.lon, 2)}°D</td></tr></table></div>`).addTo(map);
   });
-  map.on("click", "plumes", (e) => showPlume(e.features[0], e.lngLat));
+  map.on("click", "plumes", (e) => openDetail(e.features[0].properties.id));
   for (const id of ["cells", "plumes"]) {
     map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
     map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
@@ -223,7 +223,10 @@ function bindSeg(id, key, cb) {
   $(id).addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (!b) return;
-    [...$(id).children].forEach((x) => x.classList.toggle("on", x === b));
+    [...$(id).children].forEach((x) => {
+      x.classList.toggle("on", x === b);
+      x.setAttribute("aria-pressed", String(x === b));
+    });
     state[key] = b.dataset[key];
     cb();
   });
@@ -233,30 +236,121 @@ bindSeg("view", "view", () => state.data && renderCells());
 
 // ---- Carbon Mapper bulutları -----------------------------------------------------
 
-function showPlume(f, lngLat) {
-  // Haritadan gelen özelliklerde iç içe değerler JSON metnine dönüşüyor, asıl kaydı kullan
-  const p = state.plumes.find((x) => x.properties.id === f.properties.id)?.properties ?? f.properties;
-  const [lon, lat] = f.geometry.coordinates;
-  const rows = [
-    ["Emisyon", p.emission != null ? `${fmtNum(p.emission)} ± ${fmtNum(p.uncertainty)} kg/sa` : "yayımlanmadı"],
-    ["Sektör", esc(SECTORS[p.sector] ?? p.sector ?? "–")],
-    ["Gözlem", fmtTime(p.observed)],
-    ["Uydu", esc(p.platform ?? "–")],
-    ["Rüzgâr", p.wind_speed != null ? `${fmtNum(p.wind_speed, 1)} m/s` : "–"],
-  ];
-  const link = `https://data.carbonmapper.org/?plume_id=${encodeURIComponent(p.id)}#12/${lat.toFixed(4)}/${lon.toFixed(4)}`;
-  new maplibregl.Popup().setLngLat(lngLat).setHTML(
-    `<div class="popup"><b>Metan bulutu</b><br><small class="muted">${esc(p.id)}</small>
-      <table>${rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("")}</table>
-      <a href="${link}" target="_blank" rel="noopener">Carbon Mapper'da aç ↗</a></div>`
-  ).addTo(map);
+const PAGE = 25;
+const plumeUi = { visible: [], shown: PAGE, opener: null, current: null };
+const obsOf = (f) => f.properties.observation || {};
+const sectorName = (code) => SECTORS[code] ?? code ?? "Belirtilmemiş";
+const emissionText = (e) => e
+  ? `${fmtNum(e.value)} kg CH₄/sa` + (e.uncertainty ? ` ± ${fmtNum(e.uncertainty.value)}` : "")
+  : "Yayımlanmadı";
+
+function fillSelect(id, values) {
+  const sel = $(id);
+  const cur = sel.value;
+  sel.length = 1;
+  for (const [v, label] of values) sel.add(new Option(label, v));
+  sel.value = values.some(([v]) => v === cur) ? cur : "";
 }
 
+function applyFilters() {
+  const sector = $("f-sector").value, sensor = $("f-sensor").value, period = Number($("f-period").value);
+  const onlyEmission = $("f-emission").checked, sort = $("f-sort").value;
+  const since = period ? Date.now() - period * 86400000 : null;
+  const list = state.plumes.filter((f) => {
+    const o = obsOf(f);
+    if (sector && f.properties.sector !== sector) return false;
+    if (sensor && o.sensor !== sensor) return false;
+    if (onlyEmission && !o.emission) return false;
+    // Zamanı doğrulanmamış kayıt, dönem filtresinde tahmin yürütülerek dahil edilmez
+    if (since && !(o.observedAt && Date.parse(o.observedAt) >= since)) return false;
+    return true;
+  });
+  const key = {
+    observed: (f) => obsOf(f).observedAt || "",
+    published: (f) => obsOf(f).publishedAt || "",
+  }[sort];
+  // Emisyonu olmayan kayıtlar en yüksek emisyon sıralamasında sona gider, sıfır gibi davranılmaz
+  list.sort(sort === "emission"
+    ? (a, b) => (obsOf(b).emission?.value ?? -1) - (obsOf(a).emission?.value ?? -1)
+    : (a, b) => key(b).localeCompare(key(a)));
+  plumeUi.visible = list;
+  plumeUi.shown = PAGE;
+  map.getSource("plumes").setData({ type: "FeatureCollection", features: list });
+  syncPlumeImages();
+  const withEmission = list.filter((f) => obsOf(f).emission).length;
+  $("plume-summary").textContent = `${list.length} / ${state.plumes.length} kayıt gösteriliyor · ${withEmission} kayıtta emisyon tahmini var`;
+  renderPlumeList();
+}
+
+function renderPlumeList() {
+  const items = plumeUi.visible.slice(0, plumeUi.shown);
+  $("plume-list").innerHTML = items.length ? items.map((f) => {
+    const o = obsOf(f);
+    const when = o.observedAt ? fmtTime(o.observedAt) : "Zaman doğrulanmadı";
+    return `<li><button class="plume-item${plumeUi.current === o.id ? " sel" : ""}" data-id="${esc(o.id)}">
+      <span class="pi-top"><span class="pi-date">${esc(when)}</span><span class="pi-emi">${esc(emissionText(o.emission))}</span></span>
+      <span class="pi-meta">${esc(o.sensor ?? "Sensör belirtilmemiş")} · ${esc(sectorName(f.properties.sector))}</span>
+    </button></li>`;
+  }).join("") : `<li class="muted">Bu filtrelerle kayıt yok.</li>`;
+  $("plume-more").hidden = plumeUi.visible.length <= plumeUi.shown;
+}
+
+$("plume-list").addEventListener("click", (e) => {
+  const b = e.target.closest("button.plume-item");
+  if (b) openDetail(b.dataset.id, { fly: true, opener: b });
+});
+$("plume-more").onclick = () => { plumeUi.shown += PAGE; renderPlumeList(); };
+for (const id of ["f-sector", "f-sensor", "f-period", "f-sort", "f-emission"]) $(id).addEventListener("change", applyFilters);
+
+function openDetail(id, { fly = false, opener = null } = {}) {
+  const f = state.plumes.find((x) => x.properties.id === id);
+  if (!f) return;
+  const p = f.properties, o = obsOf(f);
+  const [lon, lat] = f.geometry.coordinates;
+  plumeUi.current = id;
+  plumeUi.opener = opener || document.activeElement;
+  $("detail-title").textContent = `Metan bulutu · ${o.sensor ?? "sensör belirtilmemiş"}`;
+  $("detail-id").textContent = `Kayıt: ${id} · ${sectorName(p.sector)}`;
+  $("d-enh").textContent = p.png
+    ? "Artış görüntüsü haritada katman olarak gösterilir (yakınlaştırın). Katalog kaydında sayısal artış değeri yok."
+    : "Bu kayıtta artış görüntüsü yok.";
+  $("d-emi").textContent = o.emission
+    ? `${emissionText(o.emission)}${o.emission.uncertainty ? " (sağlayıcının bildirdiği simetrik belirsizlik; istatistiksel tanımı kayıtta yok)" : ""}`
+    : "Sağlayıcı bu kayıt için emisyon tahmini yayımlamadı. Bu, sıfır emisyon anlamına gelmez.";
+  $("d-src").textContent = "Bu kayda bağlı bir kaynak özeti yok. Tek bulut tahmini, kaynak ortalaması veya yıllık toplam olarak kullanılamaz.";
+  $("d-link").href = o.sourceUrl || `https://data.carbonmapper.org/?plume_id=${encodeURIComponent(id)}`;
+  $("d-zoom").onclick = () => map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), PLUME_IMG_ZOOM + 3) });
+  $("plume-note").observation = o;
+  $("detail").hidden = false;
+  $("detail").scrollTop = 0;
+  $("detail-title").focus();
+  if (fly) map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), PLUME_IMG_ZOOM) });
+  renderPlumeList();
+}
+
+function closeDetail() {
+  if ($("detail").hidden) return;
+  $("detail").hidden = true;
+  plumeUi.current = null;
+  renderPlumeList();
+  const back = plumeUi.opener && document.querySelector(`.plume-item[data-id="${CSS.escape(plumeUi.opener.dataset?.id ?? "")}"]`);
+  (back || plumeUi.opener)?.focus?.();
+}
+$("detail-close").onclick = closeDetail;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDetail(); });
+
 const plumeImages = new Set();
+function syncPlumeImages() {
+  const on = $("show-plumes").checked;
+  const visible = new Set(plumeUi.visible.map((f) => f.properties.id));
+  plumeImages.forEach((id) => map.setLayoutProperty(`plume-img-${id}`, "visibility", on && visible.has(id) ? "visible" : "none"));
+  addPlumeImages();
+}
+
 function addPlumeImages() {
   if (!$("show-plumes").checked || map.getZoom() < PLUME_IMG_ZOOM) return;
   const v = map.getBounds();
-  for (const { properties: p } of state.plumes) {
+  for (const { properties: p } of plumeUi.visible) {
     const b = p.bounds; // [batı, güney, doğu, kuzey]
     if (!p.png || !b || plumeImages.has(p.id)) continue;
     if (b[2] < v.getWest() || b[0] > v.getEast() || b[3] < v.getSouth() || b[1] > v.getNorth()) continue;
@@ -271,17 +365,19 @@ map.on("moveend", addPlumeImages);
 async function loadPlumes() {
   const gj = await api("/api/plumes");
   state.plumes = gj.features;
-  map.getSource("plumes").setData(gj);
   const n = gj.features.length;
   const last = n ? fmtDay(gj.features[0].properties.observed.slice(0, 10)) : null;
-  $("plume-count").textContent = n ? `(${n}, son: ${last})` : "(henüz yok)";
-  addPlumeImages();
+  $("plume-count").textContent = n ? `(${n}, son gözlem: ${last})` : "(henüz yok)";
+  const sectors = [...new Set(gj.features.map((f) => f.properties.sector).filter(Boolean))];
+  fillSelect("f-sector", sectors.map((s) => [s, sectorName(s)]).sort((a, b) => a[1].localeCompare(b[1], "tr")));
+  const sensors = [...new Set(gj.features.map((f) => obsOf(f).sensor).filter(Boolean))].sort();
+  fillSelect("f-sensor", sensors.map((s) => [s, s]));
+  applyFilters();
+  if (plumeUi.current) openDetail(plumeUi.current);
 }
 $("show-plumes").onchange = (e) => {
-  const vis = e.target.checked ? "visible" : "none";
-  map.setLayoutProperty("plumes", "visibility", vis);
-  plumeImages.forEach((id) => map.setLayoutProperty(`plume-img-${id}`, "visibility", vis));
-  addPlumeImages();
+  map.setLayoutProperty("plumes", "visibility", e.target.checked ? "visible" : "none");
+  syncPlumeImages();
 };
 
 // ---- Geçişler ve uydu konumları ------------------------------------------------
@@ -366,6 +462,82 @@ async function loadStatus() {
     : "Henüz güncelleme yapılmadı";
 }
 
+// ---- Veri kaynakları ve uyarılar -------------------------------------------------
+
+const SOURCE_STATE = {
+  ok: ["çalışıyor", "ok"], error: ["hata", "err"], pending: ["henüz kontrol edilmedi", "idle"],
+  not_connected: ["bağlı değil", "idle"],
+};
+const TOKEN_TEXT = {
+  unset: "Token tanımlı değil; herkese açık katalog kullanılıyor.",
+  set: "Token tanımlı; henüz denenmedi.",
+  accepted: "Token kabul edildi.",
+  rejected: "Token reddedildi; herkese açık katalog kullanılıyor.",
+};
+const timeOrDash = (iso) => (iso ? fmtTime(iso) : "–");
+
+function renderSources(list) {
+  $("sources").innerHTML = list.map((s) => {
+    const [label, cls] = SOURCE_STATE[s.state] ?? [s.state, "idle"];
+    const lines = [];
+    if (s.connected) {
+      lines.push(`Son kontrol: ${timeOrDash(s.last_check)}`, `Son başarılı alma: ${timeOrDash(s.last_ok)}`);
+      if (s.observations === false) lines.push("Yörünge verisidir; ölçüm değildir.");
+      else if (s.id === "tropomi") lines.push(`Son gözlem günü: ${s.last_observation ? fmtDay(s.last_observation) : "–"}`);
+      else lines.push(`Son gözlem: ${timeOrDash(s.last_observation)}`);
+      if (s.id === "carbonmapper") {
+        lines.push(`Son yayımlanan kayıt: ${timeOrDash(s.last_published)}`);
+        if (s.records != null) lines.push(`${s.records} kayıt · ${s.duplicates ?? 0} tekrar ve ${s.invalid ?? 0} geçersiz kayıt atıldı`);
+        if (TOKEN_TEXT[s.token]) lines.push(TOKEN_TEXT[s.token]);
+      }
+      if (s.schedule) lines.push(`Güncelleme: ${s.schedule}`);
+      if (s.state === "error" && s.error) lines.push(`Hata: ${s.error}`);
+    } else {
+      lines.push(s.configured
+        ? "Erişim bilgisi sunucuda tanımlı; veri akışı henüz bağlanmadı."
+        : "Erişim bilgisi tanımlı değil; veri akışı bağlanmadı.");
+    }
+    return `<li><div class="src-head"><span class="src-name">${esc(s.name)}</span><span class="state ${cls}">${esc(label)}</span></div>
+      ${lines.map((l) => `<span class="src-line">${esc(l)}</span>`).join("")}</li>`;
+  }).join("");
+}
+
+function alertHtml(a, windowDays) {
+  if (a.kind === "new_plume") {
+    const lag = a.publicationLagDays != null ? ` (gözlemden ${fmtNum(a.publicationLagDays, 1)} gün sonra)` : "";
+    const text = `${a.sensor ?? "Sensör belirtilmemiş"} gözlemi: ${timeOrDash(a.observedAt)}. Sağlayıcı yayımlaması: ${timeOrDash(a.publishedAt)}${lag}. `
+      + `Sisteme alınma: ${timeOrDash(a.ingestedAt)}. Emisyon tahmini: ${emissionText(a.emission)}.`;
+    const why = `Neden: kayıt son ${windowDays} gün içinde sisteme ilk kez alındı. Yeni alınan kayıt geçmiş bir olaya ait olabilir.`;
+    return `<li class="info"><button class="alert-btn" data-id="${esc(a.plumeId)}"><b>Yeni bulut kaydı</b><span>${esc(text)}</span><small>${esc(why)}</small></button></li>`;
+  }
+  const texts = {
+    source_error: [`${a.name}: son kontrol başarısız`, `Kontrol: ${timeOrDash(a.lastCheck)}. Hata: ${a.error ?? "belirtilmedi"}. Son başarılı alma: ${timeOrDash(a.lastOk)}.`,
+      "Neden: kaynaktan veri alınırken hata oluştu; gösterilen veriler son başarılı almaya aittir."],
+    stale: [`${a.name}: veri güncel değil`, `Son başarılı alma: ${timeOrDash(a.lastOk)}.`,
+      `Neden: beklenen en geç ${fmtNum(a.maxAgeHours)} saat içinde yeni alma yapılmadı.`],
+    token_rejected: [`${a.name}: token reddedildi`, "Katalog herkese açık uç noktadan alınmaya devam ediyor.",
+      "Neden: sağlayıcı tokenla yapılan isteği yetkisiz saydı. Tokenın süresini sunucu ayarlarında kontrol edin."],
+  }[a.kind];
+  if (!texts) return "";
+  return `<li class="warn"><b>${esc(texts[0])}</b><span>${esc(texts[1])}</span><small>${esc(texts[2])}</small></li>`;
+}
+
+async function loadAlerts() {
+  try {
+    const [srcs, al] = await Promise.all([api("/api/sources"), api("/api/alerts")]);
+    renderSources(srcs);
+    $("alerts").innerHTML = al.items.length
+      ? al.items.map((a) => alertHtml(a, al.windowDays)).join("")
+      : `<li class="muted">Şu an uyarı yok. Bu, yeni salım olmadığını göstermez; yalnızca son ${al.windowDays} günde sisteme yeni bulut kaydı alınmadığını ve kaynaklarda hata görülmediğini belirtir.</li>`;
+  } catch (e) {
+    $("alerts").innerHTML = `<li class="muted">Uyarılar alınamadı: ${esc(e.message)}</li>`;
+  }
+}
+$("alerts").addEventListener("click", (e) => {
+  const b = e.target.closest("button.alert-btn");
+  if (b) openDetail(b.dataset.id, { fly: true, opener: b });
+});
+
 async function loadDays(keepSelection) {
   const prev = state.days[state.dayIdx]?.day;
   state.days = await api("/api/days");
@@ -381,7 +553,7 @@ async function loadDays(keepSelection) {
 
 async function init() {
   await loadDays(false);
-  await Promise.all([loadTropomi(), loadPlumes(), loadPasses(), loadPositions(), loadStatus()]);
+  await Promise.all([loadTropomi(), loadPlumes(), loadPasses(), loadPositions(), loadStatus(), loadAlerts()]);
   setInterval(loadPositions, 15000);
   setInterval(renderPasses, 60000);
   setInterval(loadPasses, 15 * 60000);
@@ -390,5 +562,6 @@ async function init() {
     await loadDays(true);
     if (state.days.length !== had) loadTropomi();
     loadStatus();
+    loadAlerts();
   }, 5 * 60000);
 }

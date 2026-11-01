@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from . import db, ingest, passes
+from . import alerts, db, ingest, passes
 from .config import BBOX, BACKFILL_DAYS, GRID, INGEST_INTERVAL_MIN, STATIC_DIR
 from .geo import turkey_cell_mask
 
@@ -101,12 +101,12 @@ def tropomi(start: str, end: str | None = None, scope: str = Query("tr", pattern
 def plumes(scope: str = Query("tr", pattern="^(tr|all)$")):
     with db.read() as con:
         rows = con.execute(
-            """SELECT id, observed, lat, lon, emission, uncertainty, sector, platform, wind_speed, png, bounds
+            """SELECT id, observed, lat, lon, emission, uncertainty, sector, platform, wind_speed, png, bounds, obs
                FROM cm_plumes WHERE (? = 'all' OR tr = 1) ORDER BY observed DESC""",
             (scope,),
         ).fetchall()
     features = []
-    for pid, observed, lat, lon, emission, uncertainty, sector, platform, wind_speed, png, bounds in rows:
+    for pid, observed, lat, lon, emission, uncertainty, sector, platform, wind_speed, png, bounds, obs in rows:
         features.append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [lon, lat]},
@@ -114,6 +114,8 @@ def plumes(scope: str = Query("tr", pattern="^(tr|all)$")):
                 "id": pid, "observed": observed, "emission": emission, "uncertainty": uncertainty,
                 "sector": sector, "platform": platform, "wind_speed": wind_speed,
                 "png": png, "bounds": json.loads(bounds) if bounds else None,
+                # metan-icerik.json observationSchema biçiminde normalleştirilmiş kayıt
+                "observation": json.loads(obs),
             },
         })
     return {"type": "FeatureCollection", "features": features}
@@ -146,6 +148,16 @@ def status():
         "backfill_days": BACKFILL_DAYS,
         "next_ingest": job.next_run_time.isoformat() if job and job.next_run_time else None,
     }
+
+
+@app.get("/api/sources")
+def get_sources():
+    return alerts.source_status()
+
+
+@app.get("/api/alerts")
+def get_alerts():
+    return alerts.alerts()
 
 
 @app.get("/healthz")

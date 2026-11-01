@@ -3,16 +3,17 @@ import json
 import logging
 import shutil
 import tempfile
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
 
-from . import db
+from . import db, observations, sources
 from .config import (
-    BBOX, CARBONMAPPER_API, CARBONMAPPER_PAGE, NRT_DAYS, NX, NY, QA_MIN, TMP_DIR, BACKFILL_DAYS,
-    TROPOMI_NRT, TROPOMI_OFFL,
+    BBOX, CARBON_MAPPER_API_TOKEN, CARBONMAPPER_API, CARBONMAPPER_PAGE, NRT_DAYS, NX, NY, QA_MIN, TMP_DIR,
+    BACKFILL_DAYS, TROPOMI_NRT, TROPOMI_OFFL,
 )
 from .geo import cell_index, in_turkey, turkey_cell_mask
 
@@ -144,10 +145,16 @@ def _prune(oldest):
             con.execute("VACUUM")
 
 
+def _last_tropomi_day():
+    with db.read() as con:
+        return con.execute("SELECT MAX(day) FROM cells WHERE tr = 1").fetchone()[0]
+
+
 def ingest_tropomi():
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     if not login():
         log.warning("Earthdata kimlik bilgisi yok, TROPOMI atlandı")
+        sources.failed("tropomi", "Earthdata kimlik bilgisi tanımlı değil veya reddedildi", auth="missing")
         return
     now = _now()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -155,23 +162,31 @@ def ingest_tropomi():
     oldest = today - timedelta(days=BACKFILL_DAYS - 1)
     _prune(oldest)
     db.set_meta("tropomi_started", now.isoformat())
-    if oldest < cutoff:
-        _ingest_product(TROPOMI_OFFL, "OFFL", oldest, cutoff)
-    _ingest_product(TROPOMI_NRT, "NRTI", cutoff, now)
+    try:
+        if oldest < cutoff:
+            _ingest_product(TROPOMI_OFFL, "OFFL", oldest, cutoff)
+        _ingest_product(TROPOMI_NRT, "NRTI", cutoff, now)
+    except Exception as e:  # granül araması başarısızsa (ağ, CMR) durum kaydına yaz, zamanlayıcı sonraki turu dener
+        log.exception("TROPOMI araması başarısız")
+        sources.failed("tropomi", e, auth="ok", last_observation=_last_tropomi_day())
+        return
     db.set_meta("tropomi_finished", _now().isoformat())
+    sources.succeeded("tropomi", auth="ok", last_observation=_last_tropomi_day())
 
 
 # --- Carbon Mapper ---------------------------------------------------------------
 
-def _fetch_carbonmapper():
-    """Kutuyla kesişen, yayımlanmış tüm CH4 bulutları; sayfa sayfa."""
+def _fetch_carbonmapper_pages(token):
     items, offset = [], 0
+    headers = {"User-Agent": "metan-turkiye/1.0"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     while True:
         query = urllib.parse.urlencode(
             [("bbox", v) for v in BBOX]
             + [("plume_gas", "CH4"), ("status", "published"), ("limit", CARBONMAPPER_PAGE), ("offset", offset)]
         )
-        req = urllib.request.Request(f"{CARBONMAPPER_API}?{query}", headers={"User-Agent": "metan-turkiye/1.0"})
+        req = urllib.request.Request(f"{CARBONMAPPER_API}?{query}", headers=headers)
         with urllib.request.urlopen(req, timeout=60) as r:
             page = json.load(r)["items"]
         items += page
@@ -180,33 +195,79 @@ def _fetch_carbonmapper():
         offset += CARBONMAPPER_PAGE
 
 
-def _plume_row(p):
-    lon, lat = p["geometry_json"]["coordinates"][:2]
-    # Carbon Mapper bazı tahminleri yayımlamıyor (hide_emission); bulut o zaman sayısız gösterilir
-    emission = None if p.get("hide_emission") else p.get("emission_auto")
+def _fetch_carbonmapper():
+    """Kutuyla kesişen, yayımlanmış tüm CH4 bulutları; sayfa sayfa. (kayıtlar, token durumu) döner.
+
+    Token tanımlıysa gönderilir. Reddedilirse katalog herkese açık olduğu için tokensız tekrar denenir
+    ve durum "rejected" olarak raporlanır; böylece süresi dolan bir token veri akışını durdurmaz."""
+    if not CARBON_MAPPER_API_TOKEN:
+        return _fetch_carbonmapper_pages(None), "unset"
+    try:
+        return _fetch_carbonmapper_pages(CARBON_MAPPER_API_TOKEN), "accepted"
+    except urllib.error.HTTPError as e:
+        if e.code not in (401, 403):
+            raise
+        log.warning("Carbon Mapper tokenı reddedildi (HTTP %s); herkese açık katalogla devam ediliyor", e.code)
+        return _fetch_carbonmapper_pages(None), "rejected"
+
+
+def _plume_row(p, obs):
+    lon, lat = obs["lon"], obs["lat"]
+    e = obs["emission"]
     return (
-        p["plume_id"], p["scene_timestamp"], lat, lon, int(in_turkey([lon], [lat])[0]),
-        emission, p.get("emission_uncertainty_auto") if emission is not None else None,
+        obs["id"], obs["observedAt"] or p.get("scene_timestamp"), lat, lon, int(in_turkey([lon], [lat])[0]),
+        e["value"] if e else None, (e["uncertainty"] or {}).get("value") if e else None,
         p.get("sector"), p.get("platform"), p.get("wind_speed_avg_auto"),
         p.get("plume_png"), json.dumps(p["plume_bounds"]) if p.get("plume_bounds") else None,
+        json.dumps(obs, ensure_ascii=False),
     )
+
+
+def _first_seen(ids, now):
+    """Yeni kimlikleri plume_seen'e ekler, her kimliğin ilk alınma zamanını döner.
+    Tablo boşsa (ilk doldurma) kayıtlar baseline olarak işaretlenir ve uyarı üretmez."""
+    with db.tx() as con:
+        baseline = int(con.execute("SELECT COUNT(*) FROM plume_seen").fetchone()[0] == 0)
+        con.executemany("INSERT OR IGNORE INTO plume_seen(id, first_seen, baseline) VALUES(?,?,?)",
+                        [(i, now, baseline) for i in ids])
+        return dict(con.execute("SELECT id, first_seen FROM plume_seen").fetchall())
 
 
 def ingest_plumes():
     """Carbon Mapper bulut kataloğu (Tanager + EMIT). Görüntü bağlantıları imzalı ve süreli olduğu,
     Carbon Mapper bulutları geri çekip güncelleyebildiği için tablo her çalışmada baştan yazılır."""
     try:
-        rows = [_plume_row(p) for p in _fetch_carbonmapper()]
+        raw, token_state = _fetch_carbonmapper()
     except Exception as e:
         log.exception("Carbon Mapper kataloğu alınamadı")
         db.set_meta("last_error", f"{_now().isoformat()} carbonmapper: {e}")
+        sources.failed("carbonmapper", e)
         return
+
+    now = _now().isoformat()
+    pairs = [(p, observations.normalize_cm_plume(p)) for p in raw]
+    invalid = sum(1 for _, o in pairs if o is None)
+    pairs = [(p, o) for p, o in pairs if o is not None]
+    raw_of = {id(o): p for p, o in pairs}
+    unique, dropped = observations.dedupe([o for _, o in pairs])
+    pairs = [(raw_of[id(o)], o) for o in unique]
+
+    seen = _first_seen([o["id"] for _, o in pairs], now)
+    for _, o in pairs:
+        o["ingestedAt"] = observations.parse_time(seen.get(o["id"]))
+    rows = [_plume_row(p, o) for p, o in pairs]
     with db.tx() as con:
         con.execute("DELETE FROM cm_plumes")
         con.executemany(
             """INSERT OR REPLACE INTO cm_plumes(id, observed, lat, lon, tr, emission, uncertainty,
-               sector, platform, wind_speed, png, bounds) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+               sector, platform, wind_speed, png, bounds, obs) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             rows,
         )
+        last_obs, last_pub = con.execute(
+            "SELECT MAX(json_extract(obs, '$.observedAt')), MAX(json_extract(obs, '$.publishedAt')) "
+            "FROM cm_plumes WHERE tr = 1").fetchone()
     db.set_meta("plumes_finished", _now().isoformat())
-    log.info("Carbon Mapper: %d bulut", len(rows))
+    sources.succeeded("carbonmapper", token=token_state, records=len(rows), duplicates=dropped,
+                      invalid=invalid, last_observation=last_obs, last_published=last_pub)
+    log.info("Carbon Mapper: %d bulut (%d tekrar, %d geçersiz kayıt atıldı; token: %s)",
+             len(rows), dropped, invalid, token_state)

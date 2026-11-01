@@ -75,6 +75,25 @@ Ardından http://localhost:8000 (compose dosyasında yerelde `ports: ["8000:8000
 | `GET /api/passes` | Önümüzdeki 72 saatteki Türkiye geçişleri |
 | `GET /api/positions` | Uyduların anlık konumu ve sonraki 100 dk'lık izi |
 | `GET /api/status` | Giriş durumu, son güncelleme, son hata |
+| `GET /api/sources` | Kaynak başına son kontrol, son başarılı alma, son gözlem/yayımlanma zamanı, token durumu |
+| `GET /api/alerts` | Açıklanabilir uyarılar: yeni bulut kaydı (gözlem/yayımlama/alınma zamanlarıyla), kaynak hatası, güncel olmayan veri |
+
+## Bilimsel içerik
+
+`static/metan-bilimsel-icerik/` içindeki metinler ve kaynaklar ayrı hazırlanmış içerik paketidir (sürüm 01.11.2026).
+Metinleri burada düzenlemeyin; paketin yeni sürümüyle değiştirin. Sayfalar: `/uydular-nasil-olcer.html` (rehber ve kavramlar),
+`/seymen.html`. Bulut kayıtları `app/observations.py` ile paketin `observationSchema` sözleşmesine çevrilir.
+
+Testler: `python -m unittest discover -s tests` ve `node --test tests/content.test.js`.
+
+## İsteğe bağlı erişimler
+
+| Değişken | Durum |
+|---|---|
+| `CARBON_MAPPER_API_TOKEN` | Tanımlıysa katalog isteğine eklenir; reddedilirse herkese açık katalogla devam edilir ve `/api/sources` "rejected" gösterir |
+| `EARTHDATA_TOKEN` | Kullanıcı/parola yerine kullanılabilir (60 gün geçerli) |
+| `CDSE_CLIENT_ID`, `CDSE_CLIENT_SECRET` | Henüz veri akışına bağlı değil; yalnızca tanımlı olup olmadığı raporlanır |
+| `CDSAPI_URL`, `CDSAPI_KEY` | ERA5 için; henüz bağlı değil |
 
 ## Notlar
 

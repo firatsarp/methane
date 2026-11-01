@@ -41,7 +41,15 @@ CREATE TABLE IF NOT EXISTS cm_plumes (
     platform TEXT,
     wind_speed REAL,
     png TEXT,
-    bounds TEXT
+    bounds TEXT,
+    obs TEXT NOT NULL
+);
+-- Bir bulut kaydının sisteme ilk alındığı zaman. cm_plumes her gün yeniden yazıldığı için ayrı tutulur.
+-- baseline=1: ilk doldurmada görülen kayıtlar, "yeni kayıt" uyarısı üretmez.
+CREATE TABLE IF NOT EXISTS plume_seen (
+    id TEXT PRIMARY KEY,
+    first_seen TEXT NOT NULL,
+    baseline INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
@@ -59,6 +67,10 @@ def connect():
 
 def init():
     with tx() as con:
+        # cm_plumes her gün baştan yazılan bir önbellek; eski sürümde obs sütunu yoksa yeniden kurulur
+        cols = {r[1] for r in con.execute("PRAGMA table_info(cm_plumes)")}
+        if cols and "obs" not in cols:
+            con.execute("DROP TABLE cm_plumes")
         con.executescript(SCHEMA)
 
 

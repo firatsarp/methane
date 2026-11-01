@@ -29,6 +29,17 @@ TROPOMI_NRT = ("S5P_L2__CH4____HiR_NRT", "2")
 # Carbon Mapper metan bulutu kataloğu (Planet Tanager + NASA EMIT). Herkese açık; ticari olmayan kullanım, kaynak gösterimi zorunlu.
 CARBONMAPPER_API = "https://api.carbonmapper.org/api/v1/catalog/plumes/annotated"
 CARBONMAPPER_PAGE = 1000
+# İsteğe bağlı; katalog tokensız da yanıt veriyor. Değer yalnızca sunucu ortamında tutulur, istemciye gönderilmez.
+CARBON_MAPPER_API_TOKEN = os.environ.get("CARBON_MAPPER_API_TOKEN", "").strip()
+
+# Henüz veri akışına bağlanmamış erişimler: yalnızca tanımlı olup olmadıkları raporlanır, değerleri okunmaz
+PENDING_CREDENTIALS = {
+    "cdse": ("CDSE_CLIENT_ID", "CDSE_CLIENT_SECRET"),
+    "cds": ("CDSAPI_URL", "CDSAPI_KEY"),
+}
+
+# "Yeni bulut kaydı" uyarısı, kaydın sisteme alınmasından sonra kaç gün gösterilsin
+ALERT_WINDOW_DAYS = int(os.environ.get("ALERT_WINDOW_DAYS", "14"))
 
 # Yörünge tahmini yapılan uydular: ad, NORAD no, kapsama kutusu (Türkiye'yi görebildiği alt-nokta alanı)
 SATELLITES = {
