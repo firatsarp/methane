@@ -141,3 +141,8 @@ body.page main { padding: calc(var(--topbar-h) + 28px) 20px 64px; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
 @media print { .topbar, .toc { display: none; } .page main { padding-top: 0; } .page .layout { display: block; } }
+
+/* Page themes style plain links; the top bar keeps its own colours */
+.topbar .brand { color: #172b3a; }
+.topbar .site-menu a, .topbar .mobile-links a { color: #33495a; }
+.topbar .site-menu a[aria-current="page"], .topbar .mobile-links a[aria-current="page"] { color: #a8401c; }
