@@ -5,7 +5,7 @@
   const { esc, fmtNum, fmtLocal, fmtUtc, fmtShort, fmtDay, getJSON, latestOnly } = F;
   const $ = (id) => document.getElementById(id);
 
-  const CONTENT_URL = "/content/metan-icerik.2026-11-01-insight-2.json";
+  const CONTENT_URL = "/content/metan-icerik.2026-11-01-general-3.json";
   const MAP_STATE_KEY = "metan.mapState";
   const PLASMA = ["#0d0887", "#5c01a6", "#9c179e", "#cc4778", "#ed7953", "#fdb42f", "#f0f921"];
   const DIVERGING = ["#2166ac", "#67a9cf", "#d1e5f0", "#f7f7f7", "#fddbc7", "#ef8a62", "#b2182b"];

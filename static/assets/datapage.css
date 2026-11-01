@@ -74,3 +74,13 @@ table.data th:first-child, table.data td:first-child { text-align: left; }
   .kv { grid-template-columns: 1fr; }
   .kv dt { margin-top: 6px; }
 }
+.explain .lead { margin-bottom: 18px; }
+.explain article section { margin-bottom: 26px; }
+.explain article h2 { font-size: 1.2rem; margin: 22px 0 8px; }
+.explain .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0; }
+.explain .actions a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; color: var(--text); background: var(--shell-2); }
+.explain .sources { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--line); }
+.explain .sources > summary { cursor: pointer; font-weight: 650; min-height: 44px; display: flex; align-items: center; color: var(--text); }
+.explain .sources ol { padding-left: 22px; margin: 14px 0 0; }
+.explain .sources li { padding: 0 0 16px 6px; font-size: .9rem; line-height: 1.6; overflow-wrap: anywhere; }
+.explain .author { display: block; color: var(--muted); font-size: .82rem; }

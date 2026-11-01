@@ -30,7 +30,7 @@ body { background: var(--shell); color: var(--text); }
 .skip:focus { top: 8px; }
 
 /* ---- Üst gezinme --------------------------------------------------------------- */
-/* Renkler sabit yazılır: sayfaya özgü CSS değişkenleri (ör. açık zeminli Seymen) çubuğu etkilemesin. */
+/* Renkler sabit yazılır: sayfaya özgü CSS değişkenleri (ör. açık zeminli okuma sayfaları) çubuğu etkilemesin. */
 .topbar {
   position: fixed; inset: 0 0 auto 0; z-index: 1000; height: var(--topbar-h);
   display: flex; align-items: center; gap: 16px; padding: 0 16px;

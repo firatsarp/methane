@@ -89,13 +89,16 @@ Ardından http://localhost:8000 (compose dosyasında yerelde `ports: ["8000:8000
 
 ## Sayfalar ve içerik
 
-Her sayfada aynı üst menü bulunur: `/` (harita), `/veriyi-anlamak.html`, `/uydular-nasil-olcer.html`,
-`/hava-ve-iklim.html` (gerçek veriyle meteoroloji ve iklim), `/seymen.html`, `/kaynaklar.html`.
+Her sayfada aynı üst menü bulunur (telefonda JavaScript gerektirmeyen Menü): `/` (harita),
+`/yuksek-degerleri-yorumlamak.html`, `/veriyi-anlamak.html`, `/uydular-nasil-olcer.html`,
+`/hava-ve-iklim.html` (gerçek veriyle meteoroloji ve iklim; açıklama metni veri sekmelerinin altında), `/kaynaklar.html`.
+Eski `/seymen.html` adresi 308 ile `/yuksek-degerleri-yorumlamak.html` adresine yönlenir.
 
-Bilimsel metinlerin tek kaynağı `static/content/metan-icerik.2026-11-01-insight-2.json` dosyasıdır; sürüm adı dosya adında
-ve betik bağlantılarında (`?v=`) yer alır, böylece eski önbellek yeni sürümün yerine geçmez. Metinleri burada düzenlemeyin; yeni
-sürümü yeni adla ekleyip `static/assets/content.js` içindeki `VERSION` değerini güncelleyin. HTML/JS/CSS/JSON yanıtları
-`Cache-Control: no-cache` ile her açılışta yeniden doğrulanır.
+Metinlerin tek kaynağı `static/content/metan-icerik.2026-11-01-general-3.json` dosyasıdır (şema 3.0.0). Okuma sayfaları bu
+JSON'dan hazırlanmış statik HTML'dir; JavaScript kapalıyken de okunur, kaynaklar sayfa sonunda kapalı "Kaynaklar" bölümündedir.
+`tests/content.test.js` sayfalardaki her paragrafın JSON'daki metinle aynı olduğunu denetler; yeni sürümde JSON ve sayfalar
+birlikte güncellenmelidir. Harita detayındaki kavram açıklamaları aynı JSON'un `glossary` alanından okunur.
+HTML/JS/CSS/JSON yanıtları `Cache-Control: no-cache` ile her açılışta yeniden doğrulanır.
 
 Testler: `python -m unittest discover -s tests` ve `node --test tests/content.test.js`.
 

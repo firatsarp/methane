@@ -1,103 +1,93 @@
 // Run: node --test tests/content.test.js
-// Bilimsel içerik sözleşmesi: tek kaynak JSON (sürüm 2026-11-01-insight-2) ve sayfaların ona bağlanması.
+// Genel okuma rehberi (sürüm 2026-11-01-general-3): tek kaynak JSON ve sunulan sayfaların ona uyması.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const VERSION = "2026-11-01-insight-2";
+const VERSION = "2026-11-01-general-3";
 const staticDir = path.join(__dirname, "..", "static");
-const file = path.join(staticDir, "content", `metan-icerik.${VERSION}.json`);
-const json = JSON.parse(fs.readFileSync(file, "utf8"));
+const json = JSON.parse(fs.readFileSync(path.join(staticDir, "content", `metan-icerik.${VERSION}.json`), "utf8"));
+const read = (f) => fs.readFileSync(path.join(staticDir, f), "utf8");
+const decode = (s) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
-// Ziyaretçiye gösterilen metinler (geliştirici metadata'sı hariç)
-function visibleTexts(c) {
-  const out = [];
-  const walkSections = (obj) => {
-    if (!obj) return;
-    for (const k of ["title", "subtitle", "summary", "lead"]) if (obj[k]) out.push(obj[k]);
-    for (const s of obj.sections || []) {
-      out.push(s.title);
-      for (const p of s.paragraphs || []) out.push(p.text);
-    }
-  };
-  walkSections(c.seymen);
-  walkSections(c.science);
-  walkSections(c.insights);
-  walkSections(c.weatherClimate);
-  for (const g of c.glossary || []) out.push(g.title, g.text);
-  for (const r of c.references || []) out.push(r.title, r.author, r.scope || "");
-  if (c.scopeNote) out.push(c.scopeNote);
-  return out;
-}
-const sectionParas = (obj) => (obj?.sections || []).flatMap((s) => s.paragraphs || []);
+const PAGES = { highValues: "yuksek-degerleri-yorumlamak.html", insights: "veriyi-anlamak.html",
+  science: "uydular-nasil-olcer.html", weatherClimate: "hava-ve-iklim.html" };
+const ALL = ["index.html", "yuksek-degerleri-yorumlamak.html", "veriyi-anlamak.html", "uydular-nasil-olcer.html",
+  "hava-ve-iklim.html", "kaynaklar.html"];
 
-test("content edition and required parts", () => {
-  assert.equal(json.editionDate, "2026-11-01");
-  for (const key of ["seymen", "science", "insights", "weatherClimate", "glossary", "references"]) {
-    assert.ok(json[key], `eksik bölüm: ${key}`);
-  }
+test("content version and section counts", () => {
+  assert.equal(json.schemaVersion, "3.0.0");
+  assert.equal(json.contentVersion, VERSION);
+  assert.equal(json.highValues.sections.length, 8);
+  assert.equal(json.science.sections.length, 13);
+  assert.equal(json.insights.sections.length, 8);
+  assert.equal(json.weatherClimate.sections.length, 6);
+  assert.equal(json.glossary.length, 14);
+  assert.equal(json.references.length, 22);
+  assert.equal(json.seymen, undefined);
 });
 
-test("every reference id used in text exists in the bibliography", () => {
+test("every reference id used in text exists", () => {
   const ids = new Set(json.references.map((r) => r.id));
-  const paras = ["seymen", "science", "insights", "weatherClimate"].flatMap((k) => sectionParas(json[k]));
-  for (const p of [...paras, ...json.glossary]) for (const r of p.refs || []) assert.ok(ids.has(r), `kaynakçada yok: ${r}`);
+  for (const k of Object.keys(PAGES)) for (const s of json[k].sections) for (const p of s.paragraphs)
+    for (const r of p.refs) assert.ok(ids.has(r), `${k}/${s.id}: ${r}`);
+  for (const g of json.glossary) for (const r of g.refs) assert.ok(ids.has(r), `glossary/${g.id}: ${r}`);
 });
 
-test("references keep real author, title, year and only https links", () => {
-  for (const r of json.references) {
-    assert.ok(r.author && r.title && Number.isInteger(r.year), r.id);
-    if (r.url != null) assert.match(r.url, /^https:\/\//, r.id);
+test("served pages carry exactly the JSON texts (single content source)", () => {
+  for (const [key, file] of Object.entries(PAGES)) {
+    const html = decode(read(file));
+    for (const s of json[key].sections) {
+      assert.ok(html.includes(`id="${s.id}"`), `${file}: bölüm ${s.id}`);
+      for (const p of s.paragraphs) assert.ok(html.includes(p.text), `${file}/${s.id}: paragraf eksik`);
+    }
   }
 });
 
-test("no forbidden themes or development text in visitor-facing content", () => {
-  const text = visibleTexts(json).join("\n");
-  for (const bad of [/Kanadevia/i, /AB-27\+BK/, /bu paket/i, /hazır içerik bileşeni/i, /Claude/, /Codex/, /\.pdf\b/i, /sohbet/i]) {
-    assert.doesNotMatch(text, bad);
+test("no location-specific editorial, citation codes or development text on pages", () => {
+  for (const file of ALL) {
+    const html = read(file);
+    for (const bad of [/Seymen/i, /Silivri/i, /7,4\s*ton/, /Guardian/i, /Kanadevia/i, /AB-27/, /İDDİADAN KAYNAĞA/,
+      /Kaynaklar ve kapsamları/, /Sağlanan belge/, /metan-icerik\.js/, /metan-bilimsel-icerik/, /\/assets\/content\.js/]) {
+      assert.doesNotMatch(html, bad, `${file}: ${bad}`);
+    }
+    // Gövdede [G21] gibi kaynak kodu görünmez
+    assert.doesNotMatch(html.replace(/<script[\s\S]*?<\/script>/g, ""), /\[(?:[A-Z]{1,5}\d{2}|UCLAM|TP|ERA5|OMH|OMF)\]/, file);
   }
 });
 
-test("7,4 ton/saat appears only in the Seymen defined-period summary", () => {
-  const where = ["science", "insights", "weatherClimate"].flatMap((k) => sectionParas(json[k]).map((p) => p.text));
-  for (const t of where.concat(json.glossary.map((g) => g.text))) assert.doesNotMatch(t, /7,4\s*ton/);
-  assert.ok(sectionParas(json.seymen).some((p) => /7,4\s*ton/.test(p.text)));
+test("reading pages end with a closed Kaynaklar list of real links", () => {
+  for (const file of ["yuksek-degerleri-yorumlamak.html", "veriyi-anlamak.html", "uydular-nasil-olcer.html", "hava-ve-iklim.html"]) {
+    const html = read(file);
+    const at = html.indexOf('<details class="sources"><summary>Kaynaklar</summary>');
+    assert.ok(at > 0, file);
+    assert.ok(at > html.lastIndexOf('<section id="', at), `${file}: kaynaklar sonda değil`);
+    assert.doesNotMatch(html, /<details class="sources" open/);
+    assert.match(html.slice(at), /<li><span class="author">[^<]+<\/span><a href="https:\/\//);
+  }
+  const refs = decode(read("kaynaklar.html"));
+  for (const r of json.references.filter((x) => x.url)) assert.ok(refs.includes(r.title), `kaynaklar: ${r.id}`);
 });
 
-test("Seymen page is static, readable without JS and has closed sources at the bottom", () => {
-  const html = fs.readFileSync(path.join(staticDir, "seymen.html"), "utf8");
-  assert.match(html, /<h1>Seymen ölçümleri nasıl okunur\?<\/h1>/);
-  for (const s of json.seymen.sections) {
-    assert.match(html, new RegExp(`<section id="${s.id}"><h2>`), s.id);
-    for (const p of s.paragraphs) assert.ok(html.includes(p.text), `${s.id}: paragraf eksik`);
-  }
-  // Kaynaklar sayfanın sonunda, kapalı başlayan details içinde; gövdede kaynak kodu yok
-  assert.match(html, /<details class="sources"><summary>Kaynaklar<\/summary>/);
-  assert.doesNotMatch(html, /<details class="sources" open/);
-  assert.ok(html.indexOf('class="sources"') > html.lastIndexOf("</section>"));
-  assert.doesNotMatch(html, /\[(G21|S24|SC23|B21|UCLA26|UCLAM|GU26|CM26)\]/);
-  for (const bad of [/metan-icerik\.js/, /metan-bilimsel-icerik/, /metan-seymen/, /İDDİADAN KAYNAĞA/, /Kaynaklar ve kapsamları/, /AB-27/, /Sağlanan belge/]) {
-    assert.doesNotMatch(html, bad);
+test("same six-item visible navigation everywhere, with way back to the map", () => {
+  const labels = ["Harita", "Yüksek Değerler", "Veriyi Anlamak", "Uydular Nasıl Ölçer?", "Hava ve İklim", "Kaynaklar"];
+  for (const file of ALL) {
+    const html = read(file);
+    for (const cls of ['id="site-menu"', 'class="mobile-links"']) {
+      const nav = html.match(new RegExp(`<nav ${cls}[^>]*>[\\s\\S]*?</nav>`))[0];
+      assert.deepEqual([...nav.matchAll(/>([^<]+)<\/a>/g)].map((m) => m[1]), labels, `${file} ${cls}`);
+    }
+    assert.match(html, /<details class="mobile-menu"><summary>Menü<\/summary>/, file);
+    if (file !== "index.html") assert.match(html, /Haritaya dön/, file);
   }
 });
 
-test("pages load the versioned content file, not the old package", () => {
-  for (const page of ["veriyi-anlamak.html", "uydular-nasil-olcer.html", "kaynaklar.html", "hava-ve-iklim.html"]) {
-    const html = fs.readFileSync(path.join(staticDir, page), "utf8");
-    assert.doesNotMatch(html, /metan-bilimsel-icerik/, page);
-    assert.match(html, /\/assets\/content\.js\?v=2026-11-01-insight-2/, page);
-  }
-  const js = fs.readFileSync(path.join(staticDir, "assets", "content.js"), "utf8");
-  assert.match(js, new RegExp(`VERSION = "${VERSION}"`));
-});
-
-test("every page has the same six-item navigation and a way back to the map", () => {
-  const labels = ["Harita", "Veriyi Anlamak", "Uydular Nasıl Ölçer?", "Hava ve İklim", "Seymen", "Kaynaklar"];
-  for (const page of ["index.html", "veriyi-anlamak.html", "uydular-nasil-olcer.html", "hava-ve-iklim.html", "seymen.html", "kaynaklar.html"]) {
-    const html = fs.readFileSync(path.join(staticDir, page), "utf8");
-    const nav = html.match(/<nav id="site-menu"[\s\S]*?<\/nav>/)[0];
-    assert.deepEqual([...nav.matchAll(/>([^<]+)<\/a>/g)].map((m) => m[1]), labels, page);
-    if (page !== "index.html") assert.match(html, /Haritaya dön/, page);
-  }
+test("map uses the general reading note and the current content file", () => {
+  const html = read("index.html");
+  assert.match(html, /Yüksek bir metan değeri gördüğümde neye bakmalıyım\?/);
+  assert.match(html, /href="\/yuksek-degerleri-yorumlamak.html">Yüksek değerleri yorumlama rehberini aç/);
+  assert.match(read("assets/map.js"), new RegExp(`metan-icerik\\.${VERSION}\\.json`));
+  const ids = new Set(json.glossary.map((g) => g.id));
+  for (const id of ["emisyon", "belirsizlik", "gecikme", "ruzgar"]) assert.ok(ids.has(id), id);
 });

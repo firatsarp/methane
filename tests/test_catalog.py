@@ -144,5 +144,16 @@ class SourceSummaryTest(unittest.TestCase):
         self.assertIsNone(s3)
 
 
+class RetiredPageTest(unittest.TestCase):
+    def test_old_location_page_redirects_permanently(self):
+        from app import main
+        r = main.retired_seymen()
+        self.assertEqual(r.status_code, 308)
+        self.assertEqual(r.headers["location"], "/yuksek-degerleri-yorumlamak.html")
+        # Rota statik dosya bağlamasından önce kayıtlı olmalı; yoksa eski dosya sunulur
+        paths = [getattr(x, "path", None) for x in main.app.routes]
+        self.assertLess(paths.index("/seymen.html"), paths.index(""))
+
+
 if __name__ == "__main__":
     unittest.main()

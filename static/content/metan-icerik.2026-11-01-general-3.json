@@ -1,114 +1,10 @@
 {
-  "schemaVersion": "2.0.0",
+  "schemaVersion": "3.0.0",
   "editionDate": "2026-11-01",
   "locale": "tr-TR",
   "timezone": "Europe/Istanbul",
-  "editorialNote": "Metinler, sağlanan araştırmalardan yararlanılarak uydu verilerini okumaya yardımcı olmak için hazırlanmıştır. Tekrarlanan dosyalar kaynakçada tek çalışma olarak gösterilmiştir.",
+  "editorialNote": "Bu rehber, herhangi bir konumda görülen yüksek metan değerini ölçümün türü ve gözlem koşullarıyla birlikte yorumlamaya yardımcı olmak için hazırlanmıştır.",
   "scopeNote": "Bir ölçümü; zamanı, gösterdiği büyüklük, kapsadığı alan ve gözlem koşullarıyla birlikte okumak daha anlamlı bir değerlendirme sağlar.",
-  "seymen": {
-    "id": "seymen",
-    "title": "Seymen ölçümleri nasıl okunur?",
-    "subtitle": "Gözlem zamanı, metan bulutu ve hava koşulları",
-    "summary": "Uydu görüntüsü, belirli bir anda metanın atmosferdeki dağılımını gösterir. Seymen’i izlerken gözlem tarihini, bulutun biçimini, emisyon tahminini ve o andaki hava koşullarını birlikte okuyabilirsin.",
-    "sections": [
-      {
-        "id": "baslangic",
-        "title": "Önce gözlemin tarihine bak",
-        "paragraphs": [
-          {
-            "text": "Haritadaki bir bulut, kaydın gözlem tarihinde elde edilen bilgiyi temsil eder. Gözlem zamanı, verinin yayımlandığı zaman ve sitenin güncellendiği zaman farklı olabilir. Gözlemleri tarih sırasına koymak, aynı çevredeki değişimi izlemeyi kolaylaştırır.",
-            "refs": [
-              "CM26",
-              "SC23"
-            ]
-          }
-        ]
-      },
-      {
-        "id": "bulut",
-        "title": "Bulutun rengi ve biçimi ne anlatır?",
-        "paragraphs": [
-          {
-            "text": "Renkler, lejantta belirtilen metan büyüklüğünün sayısal karşılığıdır. Bulutun uzandığı yön ve çevresindeki artış, metanın taşınışını incelemeye yardımcı olur. Yorumlamak için görüntüdeki birimi, arka planı ve gözlem anına uygun rüzgâr bilgisini birlikte kullan.",
-            "refs": [
-              "G21",
-              "B21"
-            ]
-          },
-          {
-            "text": "Aynı miktarda metan salınırken farklı rüzgâr koşullarında farklı biçim ve yoğunlukta bulutlar görülebilir. İki görüntüyü karşılaştırırken aynı renk ölçeğini ve benzer gözlem koşullarını seçmek farkın anlaşılmasını kolaylaştırır.",
-            "refs": [
-              "G21",
-              "P23"
-            ]
-          }
-        ]
-      },
-      {
-        "id": "miktar",
-        "title": "Metan artışı ve salım hızı nasıl ilişkilidir?",
-        "paragraphs": [
-          {
-            "text": "Metan artışı, görüntüde arka plana göre ne kadar fazla metan bulunduğunu anlatır. kg/saat veya ton/saat ise birim zamanda salındığı tahmin edilen metanı gösterir. Salım tahmini; buluttaki metan, rüzgâr ve kullanılan hesaplama yöntemiyle ilişkilidir.",
-            "refs": [
-              "G21",
-              "B21"
-            ]
-          },
-          {
-            "text": "Tek bir gözlemin tahminiyle farklı tarihlerdeki gözlemlerden oluşturulan kaynak ortalamasını ayrı okuyabilirsin. Örneğin Guardian haberinin dayandığı UCLA incelemesinde Silivri için verilen yaklaşık 7,4 ton/saat, 1 Ocak 2025–1 Haziran 2026 inceleme dönemindeki kaynak ortalaması olarak sunulmuştur. Haritada seçtiğin bulutun kendi değeri, kendi kaydında gösterilir.",
-            "refs": [
-              "UCLA26",
-              "UCLAM",
-              "GU26"
-            ]
-          }
-        ]
-      },
-      {
-        "id": "zaman",
-        "title": "Birden fazla gözlem ne kazandırır?",
-        "paragraphs": [
-          {
-            "text": "Aynı kaynak çevresindeki farklı tarihli gözlemler, tespitlerin tekrarını ve tahminlerin nasıl değiştiğini görmeye yardımcı olur. Gözlem sayısı, gözlemler arasındaki süre, kullanılan sensör ve uygun gözlem koşulları birlikte gösterildiğinde zaman içindeki örüntüler daha anlaşılır olur.",
-            "refs": [
-              "SC23",
-              "S24"
-            ]
-          },
-          {
-            "text": "Uygun bir geçişte tespit olmaması da kayıtlı bir bilgidir. Bulutlu hava veya kapsama dışı olma nedeniyle ölçüm bulunmaması ise ayrı bir durumdur. Bu iki bilgiyi ayırmak, izleme takvimini doğru okumayı sağlar.",
-            "refs": [
-              "S24",
-              "EM25"
-            ]
-          }
-        ]
-      },
-      {
-        "id": "birlikte",
-        "title": "Bu sayfada hangi bilgileri bir araya getiriyoruz?",
-        "paragraphs": [
-          {
-            "text": "Uydu kaydı, gözlem saatine ait meteoroloji, çevrenin görüntüsü ve aynı kaynağın zaman çizelgesi birbirini tamamlar. Bir gözlemi seçtiğinde bu bilgileri yan yana inceleyebilir; ölçümün ayrıntılarına ve özgün veri kaydına ulaşabilirsin.",
-            "refs": [
-              "G21",
-              "B21",
-              "SC23"
-            ]
-          },
-          {
-            "text": "Araştırmalar bu okuma biçiminin bilimsel dayanağını oluşturur. Seymen’e ilişkin sayılar ise tarih ve kaynak kimliği belirtilen gözlem kayıtlarından gelir.",
-            "refs": [
-              "G21",
-              "SC23",
-              "S24"
-            ]
-          }
-        ]
-      }
-    ]
-  },
   "science": {
     "title": "Uydular metanı nasıl ölçer?",
     "subtitle": "Işıktan gözleme, gözlemden yoruma",
@@ -320,8 +216,7 @@
             "text": "Tek bulut bir gözlem anını, kaynak ortalaması ise tanımlanmış bir dönem ve gözlem kümesini özetler. Bir zaman çizelgesi; gözlem sayısını, aralıkları ve tahminlerin dağılımını birlikte gösterdiğinde tekrarları ve değişimleri görmeyi kolaylaştırır.",
             "refs": [
               "SC23",
-              "G21",
-              "UCLAM"
+              "G21"
             ]
           },
           {
@@ -494,7 +389,6 @@
       "title": "Kaynak ortalaması",
       "text": "Tanımlı bir dönem ve gözlem kümesinin özetidir. Dönem, gözlem sayısı ve hesaplama yöntemiyle birlikte okunur.",
       "refs": [
-        "UCLAM",
         "SC23"
       ]
     },
@@ -672,33 +566,6 @@
       "scope": "Atık sahalarında zamana bağlı metan oluşumuna ilişkin senaryolar ve veri gereksinimleri."
     },
     {
-      "id": "UCLA26",
-      "author": "UCLA STOP Methane Project",
-      "year": 2026,
-      "title": "Spotlight on Top Methane Sources in Turkey’s Waste Sector",
-      "url": "https://law.ucla.edu/news/spotlight-top-methane-sources-turkeys-waste-sector",
-      "pages": "",
-      "scope": "Türkiye’deki metan kaynaklarının tanımlı gözlem dönemine dayalı incelemesi."
-    },
-    {
-      "id": "UCLAM",
-      "author": "UCLA STOP Methane Project",
-      "year": 2026,
-      "title": "Spotlight on the Top 25 Methane Plumes in 2025: Landfills — yöntem ve Silivri–Seymen eşleştirmesi",
-      "url": "https://law.ucla.edu/news/spotlight-top-25-methane-plumes-2025-landfills",
-      "pages": "",
-      "scope": "Kaynak eşleştirmesi, gözlemlerin gruplanması ve dönem özetlerinin yöntemi."
-    },
-    {
-      "id": "GU26",
-      "author": "The Guardian",
-      "year": 2026,
-      "title": "Revealed: the methane mega-leaks from UN climate summit host Turkey",
-      "url": "https://www.theguardian.com/environment/2026/oct/05/methane-mega-leaks-from-un-climate-summit-host-turkey",
-      "pages": "",
-      "scope": "Seymen ve Silivri çevresindeki metan ölçümlerini gündeme getiren 5 Ekim 2026 tarihli haber."
-    },
-    {
       "id": "CM26",
       "author": "Carbon Mapper",
       "year": 2026,
@@ -776,7 +643,7 @@
       "validObservationConfirmed"
     ]
   },
-  "contentVersion": "2026-11-01-insight-2",
+  "contentVersion": "2026-11-01-general-3",
   "insights": {
     "title": "Metan verilerini okumak",
     "subtitle": "Araştırmalardan haritaya",
@@ -1014,14 +881,14 @@
   "interfaceCopy": {
     "mainNavigation": [
       "Harita",
+      "Yüksek Değerler",
       "Veriyi Anlamak",
       "Uydular Nasıl Ölçer?",
       "Hava ve İklim",
-      "Seymen",
       "Kaynaklar"
     ],
-    "pinnedTitle": "Haritadaki metan verilerini nasıl okuyabilirim?",
-    "pinnedSummary": "Ölçümün tarihini, birimini ve hava koşullarını birlikte inceleyerek başla.",
+    "pinnedTitle": "Yüksek bir metan değeri gördüğümde neye bakmalıyım?",
+    "pinnedSummary": "Birimi, gözlem zamanını, rüzgârı ve diğer gözlemleri birlikte incele.",
     "weatherTabs": [
       "Gözlem Anı",
       "Güncel / Tahmin",
@@ -1039,5 +906,172 @@
     "alertTitle": "İzleme bildirimleri",
     "newHistoricalRecord": "Geçmiş bir gözlem yeni yayımlandı.",
     "newObservation": "Yeni gözlem kaydı alındı."
+  },
+  "presentation": {
+    "inlineCitationCodes": false,
+    "sourcesCollapsed": true,
+    "locationSpecificContent": false
+  },
+  "highValues": {
+    "title": "Yüksek metan değerlerini nasıl yorumlamalıyız?",
+    "subtitle": "Ölçümün türünü, zamanını ve koşullarını birlikte okumak",
+    "lead": "Yüksek bir metan değeri, daha ayrıntılı inceleme için önemli bir bilgidir. Ne ölçüldüğünü, hangi alanın temsil edildiğini ve gözlemin koşullarını birlikte incelemek, bu bilginin anlamını daha açık hâle getirir.",
+    "sections": [
+      {
+        "id": "birim",
+        "title": "Önce hangi büyüklüğe baktığını belirle",
+        "paragraphs": [
+          {
+            "text": "ppb ile gösterilen bölgesel metan haritası, hava sütunundaki ortalama oranı verir. Bir bulutun arka plana göre artışı ise ürününe göre ppb veya ppm·m ile gösterilebilir. kg/saat ya da ton/saat, bir kaynaktan birim zamanda salındığı tahmin edilen metanı anlatır. Bu değerler farklı sorulara cevap verir; karşılaştırmaya birimden başla.",
+            "refs": [
+              "TP",
+              "G21",
+              "EM25"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "referans",
+        "title": "“Yüksek” değer neye göre yüksek?",
+        "paragraphs": [
+          {
+            "text": "Bir noktadaki değeri çevresindeki uygun arka planla ve benzer zamanlardaki ölçümlerle karşılaştır. Anomali gösteriliyorsa hangi bölgeye veya döneme göre hesaplandığına bak. Bölgesel olarak yükselen metan ile belirli bir kaynak çevresindeki artışı ayırmak, incelemenin sonraki adımını belirlemeye yardımcı olur.",
+            "refs": [
+              "G21",
+              "SC23"
+            ]
+          },
+          {
+            "text": "Renk ölçeği de karşılaştırmanın parçasıdır. Farklı tarihlerde otomatik değişen lejantlar, aynı rengi farklı sayısal değerlere karşılık getirebilir. İki haritayı karşılaştırırken birimi, lejant aralığını ve ölçülen alanı birlikte kontrol et.",
+            "refs": [
+              "G21",
+              "EM25"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "zaman",
+        "title": "Ölçümün tarihini ve saatini kontrol et",
+        "paragraphs": [
+          {
+            "text": "Bir kaydın gözlem zamanı, yayımlandığı zaman ve siteye geldiği zaman farklı olabilir. Yeni yayımlanan bir kayıt, geçmişteki bir gözlemi temsil edebilir. Tarihi ve saati belli olan gözlemleri zaman çizelgesinde incelemek, yüksek değerin ne zaman görüldüğünü anlamayı sağlar.",
+            "refs": [
+              "CM26",
+              "SC23"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ruzgar",
+        "title": "Bulutun biçimini rüzgârla birlikte oku",
+        "paragraphs": [
+          {
+            "text": "Rüzgâr metanı taşır ve seyreltir. Aynı salım miktarı farklı hava koşullarında daha yoğun, daha yayılmış veya farklı uzunlukta bir bulut oluşturabilir. Bu yüzden görüntünün parlaklığını ya da alanını karşılaştırırken gözlem saatine ait rüzgâr hızını, yönünü ve kullanılan yüksekliği de incele.",
+            "refs": [
+              "G21",
+              "B21",
+              "P23"
+            ]
+          },
+          {
+            "text": "Geçmiş bir bulut için o tarihin meteorolojisini seç. Güncel hava tahmini ise yeni gözlem fırsatlarını izlemeye yardımcı olur. İkisini ayrı okumak, farklı zamanların koşullarını birbiriyle karıştırmadan karşılaştırmayı sağlar.",
+            "refs": [
+              "B21",
+              "ERA5",
+              "OMH"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "kapsama",
+        "title": "Ölçülen alanı ve veri kalitesini incele",
+        "paragraphs": [
+          {
+            "text": "Günlük ortalama, o gün kullanılabilen ölçümlerin özetidir. Bir gün ülkenin veya seçilen bölgenin küçük bir bölümü ölçülmüşse, ortalama bu alanların etkisini taşır. Ortalama değişimini kapsama oranıyla birlikte oku; mümkün olduğunda aynı alan ve kalite kurallarıyla üretilmiş serileri karşılaştır.",
+            "refs": [
+              "TP",
+              "B21"
+            ]
+          },
+          {
+            "text": "Bulutluluk, yüzeyin özellikleri ve sensörün sinyali ayrıştırma koşulları kullanılabilir veriyi etkiler. Kalite bilgisi ve çevrenin görüntüsü, görülen artışın değerlendirilmesinde yardımcı olur.",
+            "refs": [
+              "G21",
+              "F21",
+              "R24"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "emisyon",
+        "title": "Salım tahminini kendi belirsizliğiyle değerlendir",
+        "paragraphs": [
+          {
+            "text": "kg/saat gibi bir tahmin, görüntüdeki metan artışına ek olarak rüzgâr ve hesaplama yöntemi hakkında bilgi kullanır. Tahminin yanında sağlayıcının verdiği belirsizlik aralığını ve bu aralığın tanımını incele. İki gözlem arasındaki farkı değerlendirirken aynı birimleri, yöntemleri ve koşulları karşılaştır.",
+            "refs": [
+              "G21",
+              "B21",
+              "S23",
+              "S24"
+            ]
+          },
+          {
+            "text": "Belirsizlik, ölçümün değerlendirilmesinin bir parçasıdır. Büyük ve tekrarlanan salımların belirlenmesinde uydu verileri önemli bilgi sağlar. Kontrollü salım deneyleri, tespit ve miktar tahminlerinin başarısını farklı sistem ve koşullarda incelemek için kullanılır.",
+            "refs": [
+              "S23",
+              "S24"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tekrar",
+        "title": "Tek gözlemi zaman içindeki tekrarlarla tamamla",
+        "paragraphs": [
+          {
+            "text": "Aynı kaynak çevresindeki farklı tarihli uygun gözlemler, tespitlerin tekrarını ve tahminlerin nasıl değiştiğini görmeyi sağlar. Gözlem sayısını, aralıklarını ve kullanılan sensörü birlikte incele. Tek gözlemin salım hızı ile belirli bir dönemin kaynak ortalaması ayrı bilgilerdir.",
+            "refs": [
+              "SC23",
+              "G21"
+            ]
+          },
+          {
+            "text": "Tespit görülmeyen uygun bir gözlem ile o tarihte veri bulunmaması ayrı durumlardır. Tespit sıklığını değerlendirmek için kaç kullanılabilir gözlem yapıldığını da bilmek gerekir. Yalnızca tespitlerin listelendiği bir katalog, bu sayıyı tek başına vermez.",
+            "refs": [
+              "S24",
+              "EM25"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sonraki-adim",
+        "title": "İncelemeyi hangi bilgilerle güçlendirebilirsin?",
+        "paragraphs": [
+          {
+            "text": "Özgün kaydı aç; ürünün birimini, gözlem zamanını ve kalite bilgisini kontrol et. Aynı yerin diğer tarihlerini ve farklı sensörlerden gelen uygun gözlemleri incele. Gözlem saatinin meteorolojisini ve varsa yer ölçümlerini ekle. Bu bilgiler bir araya geldiğinde yüksek değeri daha sağlam bir bağlamda okuyabilirsin.",
+            "refs": [
+              "G21",
+              "SC23",
+              "TH15",
+              "TH17"
+            ]
+          },
+          {
+            "text": "Aynı görüntünün iki veri portalında bulunması, iki bağımsız gözlem olduğu anlamına gelmez. Kayıt ve sensör kimliği aynıysa tek gözlemin farklı erişim yollarıdır. Farklı tarih ve sensörler ise değerlendirmeye ek bilgi katabilir.",
+            "refs": [
+              "EM25",
+              "CM26",
+              "S24"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

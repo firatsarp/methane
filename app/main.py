@@ -7,7 +7,7 @@ import numpy as np
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import alerts, catalog, cds, climate, db, emit, imagery, ingest, passes, store, weather
@@ -298,6 +298,15 @@ def get_imagery(obs_id: str):
             raise HTTPException(404, "Görüntü henüz yok")
         return FileResponse(path, media_type="image/png")
     return imagery.status_for(o)
+
+
+# Konuma özel eski rehber sayfası kaldırıldı; eski bağlantılar genel yüksek değer rehberine kalıcı yönlenir
+RETIRED_PAGES = {"/seymen.html": "/yuksek-degerleri-yorumlamak.html"}
+
+
+@app.get("/seymen.html", include_in_schema=False)
+def retired_seymen():
+    return RedirectResponse(RETIRED_PAGES["/seymen.html"], status_code=308)
 
 
 @app.get("/healthz")
