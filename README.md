@@ -76,24 +76,40 @@ Ardından http://localhost:8000 (compose dosyasında yerelde `ports: ["8000:8000
 | `GET /api/positions` | Uyduların anlık konumu ve sonraki 100 dk'lık izi |
 | `GET /api/status` | Giriş durumu, son güncelleme, son hata |
 | `GET /api/sources` | Kaynak başına son kontrol, son başarılı alma, son gözlem/yayımlanma zamanı, token durumu |
-| `GET /api/alerts` | Açıklanabilir uyarılar: yeni bulut kaydı (gözlem/yayımlama/alınma zamanlarıyla), kaynak hatası, güncel olmayan veri |
+| `GET /api/alerts` | Eski sözleşme: yeni bulut kaydı ve kaynak uyarıları (`/api/monitoring-events` alt kümesi) |
+| `GET /api/observations` | Kanonik gözlemler (Carbon Mapper + NASA EMIT, aynı EMIT gözlemi tek kayıt): `sector`, `sensor`, `days`, `since`, `until`, `emission_only`, `sort`, `limit`, `offset`; toplam, filtrelenmiş sayı ve filtre seçenekleri |
+| `GET /api/observations/{id}` | Normalize gözlem, erişim yolları, sağlayıcı kaynak özeti ve aynı kaynağın diğer kayıtları |
+| `GET /api/source-summaries[/{id}]` | Carbon Mapper kaynak özetleri (tek bulutlardan ayrı) |
+| `GET /api/weather/observation/{id}` | Gözlemin kendi koordinatı ve saatine ait ERA5 (Open-Meteo yolu; CDS tanımlıysa CDS işi) |
+| `GET /api/weather/forecast?lat=&lon=` | Open-Meteo güncel durum + 72 saat tahmin (1 saat önbellek) |
+| `GET /api/climate?lat=&lon=&period=1991-2020[&compare=YYYY-MM]` | ERA5 1991–2020 aylık referans ve tamamlanmış ay karşılaştırması; ilk istekte arka plan işi kuyruğa alınır |
+| `GET /api/imagery/{id}` | Sentinel-2 L2A yüzey görüntüsü durumu / PNG (CDSE tanımlıysa) |
+| `GET /api/data-status` | Sır içermeyen kaynak durumları ve iş kuyruğu sayıları |
+| `GET /api/monitoring-events` | Açıklanabilir izleme olayları: yeni gözlem, geçmiş gözlem yeni yayımlandı, tekrarlanan tespit, kayıt güncellendi, TROPOMI bölgesel artış adayı (kural gösterilir), veri güncellenemedi |
 
-## Bilimsel içerik
+## Sayfalar ve içerik
 
-`static/metan-bilimsel-icerik/` içindeki metinler ve kaynaklar ayrı hazırlanmış içerik paketidir (sürüm 01.11.2026).
-Metinleri burada düzenlemeyin; paketin yeni sürümüyle değiştirin. Sayfalar: `/uydular-nasil-olcer.html` (rehber ve kavramlar),
-`/seymen.html`. Bulut kayıtları `app/observations.py` ile paketin `observationSchema` sözleşmesine çevrilir.
+Her sayfada aynı üst menü bulunur: `/` (harita), `/veriyi-anlamak.html`, `/uydular-nasil-olcer.html`,
+`/hava-ve-iklim.html` (gerçek veriyle meteoroloji ve iklim), `/seymen.html`, `/kaynaklar.html`.
+
+Bilimsel metinlerin tek kaynağı `static/content/metan-icerik.2026-11-01-insight-2.json` dosyasıdır; sürüm adı dosya adında
+ve betik bağlantılarında (`?v=`) yer alır, böylece eski önbellek yeni sürümün yerine geçmez. Metinleri burada düzenlemeyin; yeni
+sürümü yeni adla ekleyip `static/assets/content.js` içindeki `VERSION` değerini güncelleyin. HTML/JS/CSS/JSON yanıtları
+`Cache-Control: no-cache` ile her açılışta yeniden doğrulanır.
 
 Testler: `python -m unittest discover -s tests` ve `node --test tests/content.test.js`.
 
-## İsteğe bağlı erişimler
+## Erişimler (yalnızca sunucu ortam değişkenleri)
 
-| Değişken | Durum |
+| Değişken | Kullanım |
 |---|---|
-| `CARBON_MAPPER_API_TOKEN` | Tanımlıysa katalog isteğine eklenir; reddedilirse herkese açık katalogla devam edilir ve `/api/sources` "rejected" gösterir |
-| `EARTHDATA_TOKEN` | Kullanıcı/parola yerine kullanılabilir (60 gün geçerli) |
-| `CDSE_CLIENT_ID`, `CDSE_CLIENT_SECRET` | Henüz veri akışına bağlı değil; yalnızca tanımlı olup olmadığı raporlanır |
-| `CDSAPI_URL`, `CDSAPI_KEY` | ERA5 için; henüz bağlı değil |
+| `EARTHDATA_TOKEN` veya `EARTHDATA_USERNAME` + `EARTHDATA_PASSWORD` | TROPOMI ve NASA EMIT (LP DAAC). Token boşsa kullanıcı adı/parola kullanılır |
+| `CARBON_MAPPER_API_TOKEN` | İsteğe bağlı; reddedilirse herkese açık katalogla devam edilir |
+| `CDSAPI_URL`, `CDSAPI_KEY` | Copernicus CDS ERA5 iş kuyruğu (gözlem anı). Hesapta "ERA5 hourly data on single levels" lisansı kabul edilmiş olmalı; edilmemişse iş `terms` tanısıyla durur |
+| `CDSE_CLIENT_ID`, `CDSE_CLIENT_SECRET` | Copernicus Data Space Sentinel-2 L2A yüzey görüntüsü (Catalog/Process v1) |
+
+Open-Meteo anahtarsız, ticari olmayan kullanım koşullarıyla kullanılır; atıf veri kartlarında gösterilir.
+Tanımlı bir erişim yalnızca "hazır" sayılır; gerçek bir istek başarıyla sonuçlanınca `/api/data-status` içinde `healthy: true` olur.
 
 ## Notlar
 

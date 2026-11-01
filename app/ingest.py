@@ -1,6 +1,7 @@
 """NASA Earthdata'dan TROPOMI metan, Carbon Mapper'dan metan bulutu verilerini çeker."""
 import json
 import logging
+import os
 import shutil
 import tempfile
 import urllib.error
@@ -12,7 +13,8 @@ import numpy as np
 
 from . import db, observations, sources
 from .config import (
-    BBOX, CARBON_MAPPER_API_TOKEN, CARBONMAPPER_API, CARBONMAPPER_PAGE, NRT_DAYS, NX, NY, QA_MIN, TMP_DIR,
+    BBOX, CARBON_MAPPER_API_TOKEN, CARBONMAPPER_API, CARBONMAPPER_PAGE, CARBONMAPPER_SOURCES_API, NRT_DAYS, NX, NY,
+    QA_MIN, TMP_DIR,
     BACKFILL_DAYS, TROPOMI_NRT, TROPOMI_OFFL,
 )
 from .geo import cell_index, in_turkey, turkey_cell_mask
@@ -33,6 +35,10 @@ def login():
         return True
     import earthaccess
 
+    # docker-compose tanımsız tokenı "" olarak geçirir; earthaccess "" değerini token sayar ve
+    # CMR 401 "Token does not exist" döner. Boşsa kaldır ki kullanıcı adı/parola kullanılsın.
+    if not os.environ.get("EARTHDATA_TOKEN"):
+        os.environ.pop("EARTHDATA_TOKEN", None)
     try:
         auth = earthaccess.login(strategy="environment")
         _logged_in = bool(auth and auth.authenticated)
@@ -233,6 +239,16 @@ def _first_seen(ids, now):
         return dict(con.execute("SELECT id, first_seen FROM plume_seen").fetchall())
 
 
+def _record_versions(obs_list, now):
+    """Her kaydın sağlayıcı değişiklik zamanını saklar. Aynı kayıt yeniden alındığında yeni olay üretmez;
+    yalnızca modified değişirse yeni satır eklenir (izleme olaylarında 'kayıt güncellendi')."""
+    rows = [(o["id"], o["modifiedAt"], o.get("processingVersion"), (o.get("emission") or {}).get("value"), now)
+            for o in obs_list if o.get("modifiedAt")]
+    with db.tx() as con:
+        con.executemany("INSERT OR IGNORE INTO plume_versions(id, modified, version, emission, seen_at) VALUES(?,?,?,?,?)",
+                        rows)
+
+
 def ingest_plumes():
     """Carbon Mapper bulut kataloğu (Tanager + EMIT). Görüntü bağlantıları imzalı ve süreli olduğu,
     Carbon Mapper bulutları geri çekip güncelleyebildiği için tablo her çalışmada baştan yazılır."""
@@ -256,6 +272,7 @@ def ingest_plumes():
     for _, o in pairs:
         o["ingestedAt"] = observations.parse_time(seen.get(o["id"]))
     rows = [_plume_row(p, o) for p, o in pairs]
+    _record_versions([o for _, o in pairs], now)
     with db.tx() as con:
         con.execute("DELETE FROM cm_plumes")
         con.executemany(
@@ -271,3 +288,30 @@ def ingest_plumes():
                       invalid=invalid, last_observation=last_obs, last_published=last_pub)
     log.info("Carbon Mapper: %d bulut (%d tekrar, %d geçersiz kayıt atıldı; token: %s)",
              len(rows), dropped, invalid, token_state)
+    ingest_cm_sources()
+
+
+def ingest_cm_sources():
+    """Carbon Mapper kaynak özetleri. Başarısız olursa bulut verisi etkilenmez; durum ayrı kaynak olarak raporlanır."""
+    query = urllib.parse.urlencode([("bbox", v) for v in BBOX] + [("plume_gas", "CH4")])
+    headers = {"User-Agent": "metan-turkiye/1.1"}
+    try:
+        req = urllib.request.Request(f"{CARBONMAPPER_SOURCES_API}?{query}", headers=headers)
+        with urllib.request.urlopen(req, timeout=90) as r:
+            features = json.load(r).get("features", [])
+    except Exception as e:
+        log.exception("Carbon Mapper kaynak özetleri alınamadı")
+        sources.failed("carbonmapper_sources", e)
+        return
+    rows, invalid = [], 0
+    for f in features:
+        o = observations.normalize_cm_source(f)
+        if not o:
+            invalid += 1
+            continue
+        rows.append((o["id"], o["lat"], o["lon"], int(in_turkey([o["lon"]], [o["lat"]])[0]),
+                     json.dumps(o, ensure_ascii=False)))
+    with db.tx() as con:
+        con.execute("DELETE FROM cm_sources")
+        con.executemany("INSERT OR REPLACE INTO cm_sources(id, lat, lon, tr, obs) VALUES(?,?,?,?,?)", rows)
+    sources.succeeded("carbonmapper_sources", records=len(rows), invalid=invalid)

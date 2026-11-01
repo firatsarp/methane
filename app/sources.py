@@ -24,10 +24,12 @@ def checked(name, **fields):
 
 def succeeded(name, **fields):
     t = now_iso()
-    update(name, last_check=t, last_ok=t, state="ok", error="", **fields)
+    update(name, last_check=t, last_ok=t, state="ok", error="", error_class="", **fields)
 
 
 def failed(name, error, **fields):
+    # Sağlayıcı hatasının sınıfı (auth, quota, terms...) ayrı alanda tutulur; metin istemciye kısaltılarak gider
+    fields.setdefault("error_class", getattr(error, "kind", "error"))
     update(name, last_check=now_iso(), state="error", error=str(error)[:300], **fields)
 
 

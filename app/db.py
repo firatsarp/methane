@@ -55,6 +55,56 @@ CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+-- NASA EMIT incelenmiş bulut kompleksleri (EMITL2BCH4PLM). footprint: GeoJSON Polygon. obs: normalize gözlem.
+CREATE TABLE IF NOT EXISTS emit_plumes (
+    id TEXT PRIMARY KEY,
+    observed TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lon REAL NOT NULL,
+    tr INTEGER NOT NULL,
+    footprint TEXT,
+    obs TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
+);
+-- Sağlayıcının bir kaydı değiştirmesi (modified/sürüm/emisyon) ayrı güncelleme olayı olarak izlenir
+CREATE TABLE IF NOT EXISTS plume_versions (
+    id TEXT NOT NULL,
+    modified TEXT NOT NULL,
+    version TEXT,
+    emission REAL,
+    seen_at TEXT NOT NULL,
+    PRIMARY KEY (id, modified)
+);
+-- Carbon Mapper kaynak özetleri (birden çok bulutun sağlayıcı tarafından kümelenmesi). Tek bulutlardan ayrı tutulur.
+CREATE TABLE IF NOT EXISTS cm_sources (
+    id TEXT PRIMARY KEY,
+    lat REAL NOT NULL,
+    lon REAL NOT NULL,
+    tr INTEGER NOT NULL,
+    obs TEXT NOT NULL
+);
+-- Sağlayıcı yanıt önbelleği (meteoroloji, iklim, yüzey görüntüsü metadata'sı). expires_at NULL: kalıcı.
+CREATE TABLE IF NOT EXISTS cache (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    expires_at TEXT
+);
+-- Uzun süren arka plan işleri (CDS ERA5, iklim serisi, yüzey görüntüsü). key aynı iş tekrar gönderilmesin diye tekildir.
+CREATE TABLE IF NOT EXISTS jobs (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    state TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    remote_id TEXT,
+    progress REAL,
+    error_class TEXT,
+    error TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS jobs_kind_state ON jobs(kind, state);
 """
 
 

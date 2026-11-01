@@ -1,7 +1,0 @@
-/* Rehber ve Seymen sayfaları: içerik paketinin preview.css'i üzerine sitenin gezinme ihtiyaçları */
-.topbar nav a[aria-current="page"] { color: #fff; text-decoration: underline; text-underline-offset: 6px; }
-.topbar nav a:focus-visible, .brand:focus-visible, .skip:focus-visible { outline: 3px solid #e77b49; outline-offset: 3px; }
-.skip { position: absolute; left: 12px; top: -60px; background: #fff; color: #15252c; padding: 8px 12px; border-radius: 6px; z-index: 10; }
-.skip:focus { top: 12px; }
-#kavramlar { scroll-margin-top: 20px; }
-.no-js a { color: #98401e; }

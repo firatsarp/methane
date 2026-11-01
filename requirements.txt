@@ -5,3 +5,4 @@ earthaccess>=0.12,<1
 netCDF4>=1.7,<2
 numpy>=1.26,<3
 skyfield>=1.49,<2
+cdsapi>=0.7.7,<0.8

@@ -3,154 +3,151 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Türkiye Metan İzleyici</title>
-  <meta name="description" content="Sentinel-5P TROPOMI ve Carbon Mapper uydu verileriyle Türkiye üzerindeki metan (CH₄) ölçümleri.">
+  <title>Harita | Türkiye Metan İzleyici</title>
+  <meta name="description" content="Sentinel-5P TROPOMI, Carbon Mapper ve NASA EMIT uydu verileriyle Türkiye üzerindeki metan (CH₄) gözlemleri.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ed7953'/%3E%3Ctext x='16' y='21' font-size='13' text-anchor='middle' fill='%23111' font-family='sans-serif' font-weight='700'%3ECH4%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="style.css">
-  <script src="/metan-bilimsel-icerik/metan-icerik.js" defer></script>
+  <link rel="stylesheet" href="/assets/site.css?v=2026-11-01-insight-2">
+  <link rel="stylesheet" href="/assets/map.css?v=2026-11-01-insight-2">
 </head>
-<body>
-  <div id="map" role="region" aria-label="Metan haritası"></div>
+<body class="mapapp">
+  <a class="skip" href="#sidebar">Sonuç listesine geç</a>
+  <header class="topbar">
+    <a class="brand" href="/" data-map-link><i aria-hidden="true"></i><span>Türkiye Metan İzleyici<small>Veriyi görmek. Ölçümü anlamak.</small></span></a>
+    <nav id="site-menu" class="site-menu" aria-label="Ana gezinme"><a href="/" data-map-link aria-current="page">Harita</a><a href="/veriyi-anlamak.html">Veriyi Anlamak</a><a href="/uydular-nasil-olcer.html">Uydular Nasıl Ölçer?</a><a href="/hava-ve-iklim.html">Hava ve İklim</a><a href="/seymen.html">Seymen</a><a href="/kaynaklar.html">Kaynaklar</a></nav>
+    <details class="mobile-menu"><summary>Menü</summary><nav class="mobile-links" aria-label="Mobil gezinme"><a href="/" data-map-link aria-current="page">Harita</a><a href="/veriyi-anlamak.html">Veriyi Anlamak</a><a href="/uydular-nasil-olcer.html">Uydular Nasıl Ölçer?</a><a href="/hava-ve-iklim.html">Hava ve İklim</a><a href="/seymen.html">Seymen</a><a href="/kaynaklar.html">Kaynaklar</a></nav></details>
+  </header>
 
-  <aside id="panel" aria-label="Kontrol paneli">
-    <header>
-      <h1>Türkiye Metan İzleyici</h1>
-      <p class="sub">Uydudan ölçülen atmosferik metan (CH₄)</p>
-      <nav class="sitenav" aria-label="Ana gezinme">
-        <a href="/uydular-nasil-olcer.html">Ölçümün mantığı</a>
-        <a href="/seymen.html">Seymen</a>
-        <a href="/uydular-nasil-olcer.html#kavramlar">Kavramlar</a>
-      </nav>
-    </header>
+  <div class="view-tabs" role="tablist" aria-label="Görünüm">
+    <button role="tab" id="tab-map" aria-controls="mapwrap" aria-selected="true">Harita</button>
+    <button role="tab" id="tab-list" aria-controls="sidebar" aria-selected="false">Sonuçlar <span id="tab-count"></span></button>
+  </div>
 
-    <div class="pinned-note"><metan-seymen-notu></metan-seymen-notu></div>
+  <div class="app" id="app">
+    <aside id="sidebar" class="sidebar" aria-label="Filtreler ve sonuçlar" tabindex="-1">
+      <section class="block" aria-labelledby="h-obs">
+        <h2 id="h-obs">Metan bulutu gözlemleri</h2>
+        <div class="filters">
+          <label>Sektör <select id="f-sector"><option value="">Tümü</option></select></label>
+          <label>Sensör <select id="f-sensor"><option value="">Tümü</option></select></label>
+          <label>Gözlem zamanı
+            <select id="f-period">
+              <option value="">Tüm bulut gözlemleri</option>
+              <option value="30">Son 30 gün</option>
+              <option value="90">Son 90 gün</option>
+              <option value="365">Son 1 yıl</option>
+            </select>
+          </label>
+          <label>Sıralama
+            <select id="f-sort">
+              <option value="observed">En yeni gözlem</option>
+              <option value="published">En yeni yayımlanan</option>
+              <option value="emission">En yüksek emisyon tahmini</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="f-emission"> Yalnızca emisyon tahmini olanlar</label>
+        </div>
+        <p class="summary" id="obs-summary" aria-live="polite">Yükleniyor…</p>
+        <p class="range" id="obs-range"></p>
+        <div class="list-actions">
+          <label class="check"><input type="checkbox" id="show-plumes" checked> Haritada göster</label>
+          <label class="check"><input type="checkbox" id="show-sources"> Kaynak özetleri</label>
+          <button class="btn small" id="download" type="button">CSV indir</button>
+        </div>
+        <ul id="obs-list" class="obs-list"></ul>
+        <button id="obs-more" class="btn small more" type="button" hidden>Daha fazla göster</button>
+        <p class="hint">Nokta: sağlayıcının tespit noktası. Bulut biçimi yakınlaştırınca sağlayıcının artış görüntüsü veya EMIT bulut sınırı olarak görünür. Listede olmayan yer, metan olmadığı anlamına gelmez.</p>
+      </section>
 
-    <div id="banner" class="banner" hidden></div>
+      <details class="block" id="sec-tropomi" open>
+        <summary><h2>Atmosferik metan · TROPOMI XCH₄</h2></summary>
+        <div class="seg" id="mode" role="group" aria-label="Dönem">
+          <button data-mode="day" class="on" aria-pressed="true">Gün</button>
+          <button data-mode="7" aria-pressed="false">7 g</button>
+          <button data-mode="30" aria-pressed="false">30 g</button>
+          <button data-mode="90" aria-pressed="false">90 g</button>
+        </div>
+        <div class="daynav">
+          <button id="prev" aria-label="Önceki gün">‹</button>
+          <div id="daylabel" aria-live="polite">Veri bekleniyor…</div>
+          <button id="next" aria-label="Sonraki gün">›</button>
+        </div>
+        <svg id="spark" viewBox="0 0 300 70" preserveAspectRatio="none" role="img" aria-label="Günlük Türkiye ortalaması ve kapsama"></svg>
+        <p class="hint">Çizgi: günlük Türkiye ortalaması (ppb). Çubuk: o gün geçerli ölçüm içeren kara hücrelerinin oranı (kapsama). Kapsama değişirse ortalama farklı alanları özetler.</p>
+        <label class="check"><input type="checkbox" id="show-tropomi" checked> Haritada göster</label>
+        <div class="seg" id="view" role="group" aria-label="Görünüm">
+          <button data-view="abs" class="on" aria-pressed="true">Mutlak (ppb)</button>
+          <button data-view="anom" aria-pressed="false">Anomali</button>
+        </div>
+        <div id="legend"><div id="legend-bar"></div><div id="legend-ticks"><span id="lg-min"></span><span id="lg-mid"></span><span id="lg-max"></span></div></div>
+        <dl id="stats">
+          <div><dt>Ortalama</dt><dd id="st-mean">–</dd></div>
+          <div><dt>En yüksek</dt><dd id="st-max">–</dd></div>
+          <div><dt>Kapsama</dt><dd id="st-cov">–</dd></div>
+        </dl>
+        <p class="hint" id="tropomi-meta"></p>
+      </details>
 
-    <section aria-labelledby="h-tropomi">
-      <h2 id="h-tropomi">Atmosferik metan · TROPOMI XCH₄</h2>
-      <div class="seg" id="mode" role="group" aria-label="Dönem">
-        <button data-mode="day" class="on" aria-pressed="true">Gün</button>
-        <button data-mode="7" aria-pressed="false">7 g</button>
-        <button data-mode="30" aria-pressed="false">30 g</button>
-        <button data-mode="90" aria-pressed="false">90 g</button>
-      </div>
-      <div class="daynav">
-        <button id="prev" aria-label="Önceki gün">‹</button>
-        <div id="daylabel" aria-live="polite">Veri bekleniyor…</div>
-        <button id="next" aria-label="Sonraki gün">›</button>
-      </div>
-      <svg id="spark" viewBox="0 0 300 56" preserveAspectRatio="none" aria-label="Günlük Türkiye ortalaması"></svg>
-      <p class="hint">Çizgi: günlük Türkiye ortalaması, gölgeli alan: ortalaması alınan dönem. Bir güne tıklayarak seçin.</p>
+      <details class="block" id="sec-events">
+        <summary><h2>İzleme bildirimleri <span id="events-count" class="count"></span></h2></summary>
+        <ul id="events" class="events"><li class="muted">Yükleniyor…</li></ul>
+      </details>
+
+      <details class="block" id="sec-passes">
+        <summary><h2>Olası gözlem fırsatları</h2></summary>
+        <p class="hint">Yörünge hesabıdır. Gündüz geçişi ışık koşulu uygun bir gözlem fırsatıdır; hedefleme ve kullanılabilir veri oluşması ayrıca doğrulanır.</p>
+        <ul id="passes" class="passes"><li class="muted">Hesaplanıyor…</li></ul>
+        <label class="check"><input type="checkbox" id="show-sats" checked> Uyduların anlık konumu (yer kapsamı değildir)</label>
+      </details>
+
+      <details class="block" id="sec-sources">
+        <summary><h2>Veri durumu</h2></summary>
+        <ul id="sources" class="sources"><li class="muted">Yükleniyor…</li></ul>
+      </details>
+
+      <footer class="attrib">
+        <p>Veri: <a href="https://disc.gsfc.nasa.gov/datasets/S5P_L2__CH4____HiR_2/summary" target="_blank" rel="noopener">Sentinel-5P TROPOMI CH₄</a> (ESA/Copernicus, NASA GES DISC) ·
+          <a href="https://data.carbonmapper.org/" target="_blank" rel="noopener">Carbon Mapper</a> (ticari olmayan kullanım, kaynak gösterimi) ·
+          <a href="https://lpdaac.usgs.gov/products/emitl2bch4plmv002/" target="_blank" rel="noopener">NASA EMIT</a> (LP DAAC) ·
+          Meteoroloji: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0), ERA5 (Copernicus) · Yörüngeler: CelesTrak.</p>
+        <p class="muted" id="status"></p>
+      </footer>
+    </aside>
+
+    <section id="mapwrap" class="mapwrap" aria-label="Harita">
+      <div id="map" role="region" aria-label="Metan haritası"></div>
+      <details class="info-card" id="info-card">
+        <summary>
+          <span class="ic-icon" aria-hidden="true">i</span>
+          <span class="ic-copy"><b>Haritadaki metan verilerini nasıl okuyabilirim?</b>
+            <small>Ölçümün tarihini, birimini ve hava koşullarını birlikte inceleyerek başla.</small></span>
+          <span class="ic-chev" aria-hidden="true">⌄</span>
+        </summary>
+        <div class="ic-body">
+          <p>Renkli ızgara, Sentinel-5P TROPOMI'nin seçilen gün veya dönemdeki atmosfer sütunu metan oranıdır (ppb). Noktalar ise Carbon Mapper ve NASA EMIT'in tek tek yayımladığı metan bulutu gözlemleridir; her birinin kendi gözlem tarihi ve emisyon tahmini vardır.</p>
+          <p>Bir noktayı seçtiğinde sağ panelde gözlemin zamanını, sağlayıcısını, emisyon tahminini ve o saate ait rüzgâr bilgisini birlikte görebilirsin.</p>
+          <p class="ic-links"><a href="/veriyi-anlamak.html">Veriyi Anlamak</a><a href="/hava-ve-iklim.html">Hava ve İklim</a><a href="/seymen.html">Seymen ölçümleri nasıl okunur?</a></p>
+        </div>
+      </details>
     </section>
 
-    <section>
-      <div class="seg" id="view" role="group" aria-label="Görünüm">
-        <button data-view="abs" class="on" aria-pressed="true">Mutlak (ppb)</button>
-        <button data-view="anom" aria-pressed="false">Anomali</button>
-      </div>
-      <div id="legend">
-        <div id="legend-bar"></div>
-        <div id="legend-ticks"><span id="lg-min"></span><span id="lg-mid"></span><span id="lg-max"></span></div>
-      </div>
-      <dl id="stats">
-        <div><dt>Ortalama</dt><dd id="st-mean">–</dd></div>
-        <div><dt>En yüksek</dt><dd id="st-max">–</dd></div>
-        <div><dt>Kapsama</dt><dd id="st-cov">–</dd></div>
-      </dl>
-      <p class="hint">Sütun ortalaması (ppb); yer seviyesi konsantrasyonu veya tesis emisyonu değildir. Veri olmayan hücreler sıfır sayılmaz.</p>
-    </section>
-
-    <section aria-labelledby="h-plumes">
-      <h2 id="h-plumes">Metan bulutları · emisyon tahmini</h2>
-      <label class="toggle"><input type="checkbox" id="show-plumes" checked> Haritada göster <span id="plume-count" class="muted"></span></label>
-      <div class="filters">
-        <label>Sektör
-          <select id="f-sector"><option value="">Tümü</option></select>
-        </label>
-        <label>Sensör
-          <select id="f-sensor"><option value="">Tümü</option></select>
-        </label>
-        <label>Gözlem dönemi
-          <select id="f-period">
-            <option value="">Tümü</option>
-            <option value="30">Son 30 gün</option>
-            <option value="90">Son 90 gün</option>
-            <option value="365">Son 1 yıl</option>
-          </select>
-        </label>
-        <label>Sıralama
-          <select id="f-sort">
-            <option value="observed">En yeni gözlem</option>
-            <option value="published">En yeni yayımlanan</option>
-            <option value="emission">En yüksek emisyon tahmini</option>
-          </select>
-        </label>
-        <label class="toggle wide"><input type="checkbox" id="f-emission"> Yalnızca emisyon tahmini yayımlananlar</label>
-      </div>
-      <p class="hint" id="plume-summary" aria-live="polite"></p>
-      <ul id="plume-list" class="plume-list"></ul>
-      <button id="plume-more" class="more" hidden>Daha fazla göster</button>
-      <p class="hint">Daire boyutu: emisyon tahmini. Bulut görüntüleri için yakınlaştırın. Listede olmayan yer, bulut olmadığı anlamına gelmez.</p>
-    </section>
-
-    <section aria-labelledby="h-alerts">
-      <h2 id="h-alerts">Uyarılar</h2>
-      <ul id="alerts" class="alerts"><li class="muted">Yükleniyor…</li></ul>
-    </section>
-
-    <section aria-labelledby="h-passes">
-      <h2 id="h-passes">Sonraki geçişler</h2>
-      <ul id="passes"><li class="muted">Hesaplanıyor…</li></ul>
-      <label class="toggle"><input type="checkbox" id="show-sats" checked> Uyduların anlık konumu</label>
-    </section>
-
-    <section aria-labelledby="h-sources">
-      <h2 id="h-sources">Veri kaynakları</h2>
-      <ul id="sources" class="sources"><li class="muted">Yükleniyor…</li></ul>
-    </section>
-
-    <footer>
-      <p>Veri: <a href="https://disc.gsfc.nasa.gov/datasets/S5P_L2__CH4____HiR_2/summary" target="_blank" rel="noopener">Sentinel-5P TROPOMI CH₄</a> (ESA/Copernicus, NASA GES DISC),
-        Metan bulutları: <a href="https://data.carbonmapper.org/" target="_blank" rel="noopener">Carbon Mapper</a> (Planet Tanager, NASA EMIT; ticari olmayan kullanım).
-        Yörüngeler: CelesTrak.</p>
-      <p class="muted" id="status"></p>
-    </footer>
-  </aside>
-
-  <aside id="detail" class="detail" aria-labelledby="detail-title" hidden>
-    <header class="detail-head">
-      <div>
-        <h2 id="detail-title" tabindex="-1">Metan bulutu</h2>
-        <p class="muted" id="detail-id"></p>
-      </div>
-      <button id="detail-close" class="icon-btn" aria-label="Detayı kapat">×</button>
-    </header>
-    <dl class="fields">
-      <div>
-        <dt>Metan artışı</dt>
-        <dd id="d-enh"></dd>
-      </div>
-      <div>
-        <dt>Emisyon tahmini (bu gözlem)</dt>
-        <dd id="d-emi"></dd>
-      </div>
-      <div>
-        <dt>Kaynak ortalaması</dt>
-        <dd id="d-src"></dd>
-      </div>
-    </dl>
-    <div class="detail-actions">
-      <button id="d-zoom" class="more">Haritada yakınlaştır</button>
-      <a id="d-link" target="_blank" rel="noopener">Carbon Mapper'da aç ↗</a>
-    </div>
-    <metan-olcum-aciklamasi id="plume-note"></metan-olcum-aciklamasi>
-    <h3 class="detail-sub">Belirsizlik nasıl okunmalı?</h3>
-    <metan-kavramlar konu="belirsizlik"></metan-kavramlar>
-  </aside>
+    <aside id="detail" class="drawer" aria-labelledby="detail-title" hidden>
+      <header class="drawer-head">
+        <div>
+          <p class="eyebrow" id="detail-kind">Metan bulutu</p>
+          <h2 id="detail-title" tabindex="-1"></h2>
+          <p class="muted" id="detail-sub"></p>
+        </div>
+        <button id="detail-close" class="icon-btn" type="button" aria-label="Ayrıntıyı kapat">×</button>
+      </header>
+      <div id="detail-body"></div>
+    </aside>
+  </div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="app.js"></script>
+  <script src="/assets/site.js?v=2026-11-01-insight-2"></script>
+  <script src="/assets/format.js?v=2026-11-01-insight-2"></script>
+  <script src="/assets/charts.js?v=2026-11-01-insight-2"></script>
+  <script src="/assets/map.js?v=2026-11-01-insight-2"></script>
 </body>
 </html>

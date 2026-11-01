@@ -29,6 +29,8 @@ TROPOMI_NRT = ("S5P_L2__CH4____HiR_NRT", "2")
 # Carbon Mapper metan bulutu kataloğu (Planet Tanager + NASA EMIT). Herkese açık; ticari olmayan kullanım, kaynak gösterimi zorunlu.
 CARBONMAPPER_API = "https://api.carbonmapper.org/api/v1/catalog/plumes/annotated"
 CARBONMAPPER_PAGE = 1000
+# Sağlayıcının bulutları kaynak olarak kümelediği özetler (plume_ids, kaynak ortalaması, gözlem/tespit tarih sayısı)
+CARBONMAPPER_SOURCES_API = "https://api.carbonmapper.org/api/v1/catalog/sources.geojson"
 # İsteğe bağlı; katalog tokensız da yanıt veriyor. Değer yalnızca sunucu ortamında tutulur, istemciye gönderilmez.
 CARBON_MAPPER_API_TOKEN = os.environ.get("CARBON_MAPPER_API_TOKEN", "").strip()
 

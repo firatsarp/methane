@@ -28,6 +28,10 @@ class IngestTest(unittest.TestCase):
         if config.DB_PATH.exists():
             config.DB_PATH.unlink()
         db.init()
+        # Kaynak özetleri ayrı bir ağ isteğidir; bu testler yalnızca bulut akışını sınar
+        patcher = mock.patch.object(ingest, "ingest_cm_sources")
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def run_ingest(self, items, token_state="unset"):
         with mock.patch.object(ingest, "_fetch_carbonmapper", return_value=(items, token_state)):
@@ -101,8 +105,32 @@ class IngestTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"CDSE_CLIENT_ID": "id", "CDSE_CLIENT_SECRET": "s3cr3t"}):
             items = {s["id"]: s for s in alerts.source_status()}
         self.assertTrue(items["cdse"]["configured"])
-        self.assertEqual(items["cdse"]["state"], "not_connected")
+        # Tanımlı erişim yalnızca "hazır"dır; gerçek istek başarılı olmadan sağlıklı sayılmaz
+        self.assertEqual(items["cdse"]["state"], "pending")
+        self.assertFalse(items["cdse"]["healthy"])
         self.assertNotIn("s3cr3t", repr(items))
+
+    def test_missing_credentials_are_not_configured(self):
+        with mock.patch.dict(os.environ, {"CDSAPI_KEY": "", "CDSE_CLIENT_ID": "", "CDSE_CLIENT_SECRET": ""}):
+            items = {s["id"]: s for s in alerts.source_status()}
+        self.assertEqual(items["cds"]["state"], "not_configured")
+        self.assertEqual(items["cdse"]["state"], "not_configured")
+        self.assertFalse(items["cds"]["healthy"])
+
+    def test_empty_earthdata_token_falls_back_to_password(self):
+        # Compose tanımsız tokenı "" geçirir; earthaccess bunu token sayarsa CMR 401 döner.
+        seen = {}
+
+        def fake_login(strategy):
+            seen["token"] = os.environ.get("EARTHDATA_TOKEN")
+            return mock.Mock(authenticated=True)
+
+        env = {"EARTHDATA_TOKEN": "", "EARTHDATA_USERNAME": "u", "EARTHDATA_PASSWORD": "p"}
+        with mock.patch.dict(os.environ, env), \
+                mock.patch.dict("sys.modules", {"earthaccess": mock.Mock(login=fake_login)}), \
+                mock.patch.object(ingest, "_logged_in", False):
+            self.assertTrue(ingest.login())
+        self.assertIsNone(seen["token"])
 
 
 if __name__ == "__main__":

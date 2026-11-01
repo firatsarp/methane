@@ -1,0 +1,1043 @@
+{
+  "schemaVersion": "2.0.0",
+  "editionDate": "2026-11-01",
+  "locale": "tr-TR",
+  "timezone": "Europe/Istanbul",
+  "editorialNote": "Metinler, sağlanan araştırmalardan yararlanılarak uydu verilerini okumaya yardımcı olmak için hazırlanmıştır. Tekrarlanan dosyalar kaynakçada tek çalışma olarak gösterilmiştir.",
+  "scopeNote": "Bir ölçümü; zamanı, gösterdiği büyüklük, kapsadığı alan ve gözlem koşullarıyla birlikte okumak daha anlamlı bir değerlendirme sağlar.",
+  "seymen": {
+    "id": "seymen",
+    "title": "Seymen ölçümleri nasıl okunur?",
+    "subtitle": "Gözlem zamanı, metan bulutu ve hava koşulları",
+    "summary": "Uydu görüntüsü, belirli bir anda metanın atmosferdeki dağılımını gösterir. Seymen’i izlerken gözlem tarihini, bulutun biçimini, emisyon tahminini ve o andaki hava koşullarını birlikte okuyabilirsin.",
+    "sections": [
+      {
+        "id": "baslangic",
+        "title": "Önce gözlemin tarihine bak",
+        "paragraphs": [
+          {
+            "text": "Haritadaki bir bulut, kaydın gözlem tarihinde elde edilen bilgiyi temsil eder. Gözlem zamanı, verinin yayımlandığı zaman ve sitenin güncellendiği zaman farklı olabilir. Gözlemleri tarih sırasına koymak, aynı çevredeki değişimi izlemeyi kolaylaştırır.",
+            "refs": [
+              "CM26",
+              "SC23"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "bulut",
+        "title": "Bulutun rengi ve biçimi ne anlatır?",
+        "paragraphs": [
+          {
+            "text": "Renkler, lejantta belirtilen metan büyüklüğünün sayısal karşılığıdır. Bulutun uzandığı yön ve çevresindeki artış, metanın taşınışını incelemeye yardımcı olur. Yorumlamak için görüntüdeki birimi, arka planı ve gözlem anına uygun rüzgâr bilgisini birlikte kullan.",
+            "refs": [
+              "G21",
+              "B21"
+            ]
+          },
+          {
+            "text": "Aynı miktarda metan salınırken farklı rüzgâr koşullarında farklı biçim ve yoğunlukta bulutlar görülebilir. İki görüntüyü karşılaştırırken aynı renk ölçeğini ve benzer gözlem koşullarını seçmek farkın anlaşılmasını kolaylaştırır.",
+            "refs": [
+              "G21",
+              "P23"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "miktar",
+        "title": "Metan artışı ve salım hızı nasıl ilişkilidir?",
+        "paragraphs": [
+          {
+            "text": "Metan artışı, görüntüde arka plana göre ne kadar fazla metan bulunduğunu anlatır. kg/saat veya ton/saat ise birim zamanda salındığı tahmin edilen metanı gösterir. Salım tahmini; buluttaki metan, rüzgâr ve kullanılan hesaplama yöntemiyle ilişkilidir.",
+            "refs": [
+              "G21",
+              "B21"
+            ]
+          },
+          {
+            "text": "Tek bir gözlemin tahminiyle farklı tarihlerdeki gözlemlerden oluşturulan kaynak ortalamasını ayrı okuyabilirsin. Örneğin Guardian haberinin dayandığı UCLA incelemesinde Silivri için verilen yaklaşık 7,4 ton/saat, 1 Ocak 2025–1 Haziran 2026 inceleme dönemindeki kaynak ortalaması olarak sunulmuştur. Haritada seçtiğin bulutun kendi değeri, kendi kaydında gösterilir.",
+            "refs": [
+              "UCLA26",
+              "UCLAM",
+              "GU26"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "zaman",
+        "title": "Birden fazla gözlem ne kazandırır?",
+        "paragraphs": [
+          {
+            "text": "Aynı kaynak çevresindeki farklı tarihli gözlemler, tespitlerin tekrarını ve tahminlerin nasıl değiştiğini görmeye yardımcı olur. Gözlem sayısı, gözlemler arasındaki süre, kullanılan sensör ve uygun gözlem koşulları birlikte gösterildiğinde zaman içindeki örüntüler daha anlaşılır olur.",
+            "refs": [
+              "SC23",
+              "S24"
+            ]
+          },
+          {
+            "text": "Uygun bir geçişte tespit olmaması da kayıtlı bir bilgidir. Bulutlu hava veya kapsama dışı olma nedeniyle ölçüm bulunmaması ise ayrı bir durumdur. Bu iki bilgiyi ayırmak, izleme takvimini doğru okumayı sağlar.",
+            "refs": [
+              "S24",
+              "EM25"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "birlikte",
+        "title": "Bu sayfada hangi bilgileri bir araya getiriyoruz?",
+        "paragraphs": [
+          {
+            "text": "Uydu kaydı, gözlem saatine ait meteoroloji, çevrenin görüntüsü ve aynı kaynağın zaman çizelgesi birbirini tamamlar. Bir gözlemi seçtiğinde bu bilgileri yan yana inceleyebilir; ölçümün ayrıntılarına ve özgün veri kaydına ulaşabilirsin.",
+            "refs": [
+              "G21",
+              "B21",
+              "SC23"
+            ]
+          },
+          {
+            "text": "Araştırmalar bu okuma biçiminin bilimsel dayanağını oluşturur. Seymen’e ilişkin sayılar ise tarih ve kaynak kimliği belirtilen gözlem kayıtlarından gelir.",
+            "refs": [
+              "G21",
+              "SC23",
+              "S24"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "science": {
+    "title": "Uydular metanı nasıl ölçer?",
+    "subtitle": "Işıktan gözleme, gözlemden yoruma",
+    "lead": "Uydular, ışığın içindeki metan izini ölçerek atmosferdeki dağılımı görünür kılar. Farklı sensörler, rüzgâr bilgisi ve tekrarlanan gözlemler birlikte kullanıldığında bir kaynağın davranışını anlamaya yardımcı olur.",
+    "flow": [
+      "Güneş ışığı",
+      "Atmosfer ve yüzey",
+      "Spektral ölçüm",
+      "Metan artışı",
+      "Bulut ve kaynak",
+      "Emisyon tahmini"
+    ],
+    "sections": [
+      {
+        "id": "isik",
+        "title": "1. Ölçümün başlangıcı: ışık",
+        "paragraphs": [
+          {
+            "text": "Güneş ışığı atmosferden geçer, yüzeyden yansır ve sensöre ulaşır. Bu yol boyunca metan belirli dalga boylarındaki ışığı soğurur. Pasif optik sensörler bu izi kullanır; yaklaşık 1.700 ve 2.300 nanometre çevresindeki soğurma yapıları bazı sistemlerin ölçümlerinde önemlidir.",
+            "refs": [
+              "G21",
+              "FR05"
+            ]
+          },
+          {
+            "text": "Işığın yeterli olduğu, yüzeyin görülebildiği geçişler kullanılabilir veri için daha elverişlidir. Bulutluluk, güneş açısı ve yüzeyden yansıyan sinyal ölçümün koşullarını belirler.",
+            "refs": [
+              "G21",
+              "S24"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "spektrum",
+        "title": "2. Metanın izi nasıl seçiliyor?",
+        "paragraphs": [
+          {
+            "text": "Görüntüleme spektrometresi her yer örneği için farklı dalga boylarındaki ışık miktarını kaydeder. Algoritmalar metanın soğurma örüntüsünü; yüzey yansıması, su buharı, diğer gazlar ve sensörün özellikleriyle birlikte değerlendirir.",
+            "refs": [
+              "FR05",
+              "TH17"
+            ]
+          },
+          {
+            "text": "Fiziksel modeller ölçülen spektrumu atmosfer ve yüzeyin hesaplanan yanıtıyla karşılaştırır. Eşleşmiş filtre gibi yöntemler ise sahnenin arka planına göre metana özgü değişimleri öne çıkarır. HAPI ve SCIATRAN, bu hesaplamaların dayandığı moleküler spektrum ve ışınım aktarımı araçlarına örnektir.",
+            "refs": [
+              "G21",
+              "F20",
+              "H19",
+              "ME23"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "artis",
+        "title": "3. Haritadaki birimler ne anlatıyor?",
+        "paragraphs": [
+          {
+            "text": "XCH₄, kuru hava sütunu boyunca ortalama metan oranıdır ve çoğunlukla ppb ile gösterilir. Bölgesel metan dağılımını okumaya yardımcı olur. Yer seviyesindeki bir hava sensörü ise bulunduğu noktadaki havayı ölçer; bu iki ölçüm farklı hacimleri temsil eder.",
+            "refs": [
+              "TP",
+              "B21"
+            ]
+          },
+          {
+            "text": "ppm·m, arka plana göre metan artışını yol uzunluğuyla birlikte ifade eder. kg/saat ise salım hızıdır. Birimlerin farklı sorulara cevap verdiğini hatırlamak, bölgesel harita ile tek kaynak bulutunu birlikte okumayı kolaylaştırır.",
+            "refs": [
+              "G21",
+              "TH15",
+              "EM25"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "bulut",
+        "title": "4. Bir metan bulutu nasıl belirleniyor?",
+        "paragraphs": [
+          {
+            "text": "Algoritma, artış haritasında uzamsal olarak bağlantılı sinyalleri arar. Bulutun biçimi, olası başlangıç noktası, çevrenin yüzey özellikleri ve rüzgârla ilişkisi birlikte incelenir. Bu adım, metan örüntüsünün çevredeki diğer görüntü yapılarından ayrılmasına yardımcı olur.",
+            "refs": [
+              "G21",
+              "R24",
+              "SC23"
+            ]
+          },
+          {
+            "text": "Bulut maskesi, metan hesabına katılan pikselleri tanımlar. Zayıf kenarların seçimi ve arka planın belirlenmesi miktar tahmininde önem taşır. Araştırmaların bir bölümü bu sınırların ve sinyal çıkarımının iyileştirilmesine odaklanır.",
+            "refs": [
+              "P23",
+              "M24",
+              "F20"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "emisyon",
+        "title": "5. Görüntüden salım hızına nasıl geçiliyor?",
+        "paragraphs": [
+          {
+            "text": "Yaklaşımlardan biri, buluttaki arka plan üzeri metan kütlesini ve bunun rüzgârla taşınma süresini ilişkilendirir. Böylece görüntüdeki metan birikiminden birim zamandaki salıma ilişkin tahmin elde edilir. Başka yöntemler bulutu kesen bir hat üzerinden geçen metanı hesaplar.",
+            "refs": [
+              "G21",
+              "B21"
+            ]
+          },
+          {
+            "text": "Entegre kütle artışı yaklaşımının basitleştirilmiş ilişkisi Q ≈ IME × Ueff / L şeklindedir. IME fazla metan kütlesini, Ueff yönteme göre tanımlanan etkin rüzgârı, L ise karakteristik bulut uzunluğunu ifade eder. Kullanılan rüzgârın yüksekliği ve yönteme uyarlanışı bu hesabın parçasıdır.",
+            "refs": [
+              "G21",
+              "B21"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "uydular",
+        "title": "6. Farklı uydular birbirini nasıl tamamlar?",
+        "paragraphs": [
+          {
+            "text": "Geniş alan tarayan sensörler bölgesel dağılımı izlemeye, daha küçük yer örneklemine sahip sistemler ise tek kaynak çevresindeki ayrıntıyı incelemeye yardımcı olur. TROPOMI, PRISMA, EMIT ve diğer sistemlerin piksel boyutu, spektral özellikleri ve gözlem takvimleri farklıdır.",
+            "refs": [
+              "G21",
+              "SC23",
+              "S24"
+            ]
+          },
+          {
+            "text": "Birlikte kullanımın örneklerinden biri, TROPOMI’deki bölgesel artışların yüksek çözünürlüklü gözlemlerle incelenmesidir. Sentinel-2 ve Landsat görüntüleri de uygun koşullarda özel metan çıkarım yöntemleriyle değerlendirmeye katılabilir. Yüzey görüntüsü ve metan ürünü haritada ayrı katmanlar olarak okunur.",
+            "refs": [
+              "SC23",
+              "S23",
+              "G21"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "kosullar",
+        "title": "7. Rüzgâr ve yüzey neden önemli?",
+        "paragraphs": [
+          {
+            "text": "Rüzgâr metanı taşır ve seyreltir. Aynı salım, farklı rüzgâr hızlarında daha kısa ve yoğun ya da daha yayılmış bir bulut oluşturabilir. Gözlem saatine uygun rüzgârı görüntüyle birlikte incelemek, bulutun biçimini ve miktar tahminini anlamaya yardımcı olur.",
+            "refs": [
+              "G21",
+              "B21"
+            ]
+          },
+          {
+            "text": "Yüzey malzemeleri ışığı farklı biçimlerde yansıtır. Yüzeyin koyuluğu, karışık dokusu ve soğurma özellikleri metan sinyalinin ayrılmasını etkileyebilir. Sahneye uygun hedef spektrumları ve daha geniş spektral bilgi, bu ayrımı geliştirmek için araştırılan yaklaşımlardır.",
+            "refs": [
+              "F21",
+              "R24",
+              "P23"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dogrulama",
+        "title": "8. Ölçümlerin başarısı nasıl değerlendiriliyor?",
+        "paragraphs": [
+          {
+            "text": "Kontrollü salım deneylerinde, gerçek miktarı araştırma ekibinden gizlenen metan salımları uydularla incelenir. Sonuçların bilinen miktarla karşılaştırılması; tespit başarısını, miktar tahminini ve bunların hangi koşullarda değiştiğini ortaya koyar.",
+            "refs": [
+              "S23",
+              "S24"
+            ]
+          },
+          {
+            "text": "Bir ölçüm kartındaki belirsizlik aralığı, tahminin sayısal olarak nasıl değerlendirilmesi gerektiğine yardım eder. Bu aralığın standart sapma mı yoksa bir güven aralığı mı olduğunu görmek, iki gözlem arasındaki farkı yorumlarken önemlidir. Kontrollü deney sonuçları da sensör ve koşullarıyla birlikte okunur.",
+            "refs": [
+              "S23",
+              "S24",
+              "B21"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "birlikte",
+        "title": "9. Birden fazla veri nasıl karşılaştırılır?",
+        "paragraphs": [
+          {
+            "text": "Önce ölçüm tarihlerini, alanı, sensörü ve birimleri eşleştir. Sonra gözlem koşullarını ve aynı kayda ait ürünlerin birbirleriyle ilişkisini incele. Böylece farklı bir sensörün yeni gözlemiyle, aynı görüntünün başka bir platformdaki yayımını ayırt edebilirsin.",
+            "refs": [
+              "SC23",
+              "EM25",
+              "S24"
+            ]
+          },
+          {
+            "text": "Aynı EMIT sahnesinin NASA ve Carbon Mapper üzerinden sunulması, aynı gözleme iki erişim yolu sağlar. Ayrı sensörlerde veya ayrı tarihlerde elde edilen uygun gözlemler ise ek bilgi taşır. Her biri zaman çizelgesinde kendi kimliğiyle gösterilir.",
+            "refs": [
+              "EM25",
+              "CM26"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "zaman",
+        "title": "10. Zaman içinde değişim nasıl okunur?",
+        "paragraphs": [
+          {
+            "text": "Tek bulut bir gözlem anını, kaynak ortalaması ise tanımlanmış bir dönem ve gözlem kümesini özetler. Bir zaman çizelgesi; gözlem sayısını, aralıkları ve tahminlerin dağılımını birlikte gösterdiğinde tekrarları ve değişimleri görmeyi kolaylaştırır.",
+            "refs": [
+              "SC23",
+              "G21",
+              "UCLAM"
+            ]
+          },
+          {
+            "text": "Gözlem zamanı, yayımlanma zamanı ve sisteme alınma zamanı ayrı bilgilerdir. Kamuya açılan veriler ölçümden sonra yayımlanabilir. Bu nedenle yeni gelen bir kayıt geçmişteki bir gözlemi temsil edebilir.",
+            "refs": [
+              "CM26"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "yorum",
+        "title": "11. Harita ortalaması nasıl okunur?",
+        "paragraphs": [
+          {
+            "text": "Günlük veya dönemsel ortalamayı, o hesaplamaya katılan alanla birlikte incele. Farklı günlerde farklı bölgeler ölçülebiliyorsa ortalamadaki farkın bir bölümü kapsamadaki değişimden gelebilir. Benzer alanları ve kalite kurallarını karşılaştırmak daha anlamlı bir izleme sağlar.",
+            "refs": [
+              "TP",
+              "B21"
+            ]
+          },
+          {
+            "text": "Haritadaki boş alanlar ölçüm bulunmayan yerleri gösterir. Geçerli bir ölçümde tespit olmaması, bulut yüzünden uygun veri oluşmaması ve alanın görüntülenmemesi ayrı durumlardır. Bu ayrım gözlem sıklığını ve tespit tekrarını okumaya yardımcı olur.",
+            "refs": [
+              "S24",
+              "SC23",
+              "EM25"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "yapay-zeka",
+        "title": "12. Algoritmalar ve yapay zekâ ne kazandırır?",
+        "paragraphs": [
+          {
+            "text": "Geliştirilmiş filtreler, sahneye özgü spektrumlar ve geniş spektral aralık kullanımı sinyalin yüzeyden ayrılmasını iyileştirebilir. Derin öğrenme ise aday bulutların ve sınırlarının büyük görüntü arşivlerinde daha hızlı seçilmesine yardımcı olur.",
+            "refs": [
+              "F20",
+              "F21",
+              "P23",
+              "R24",
+              "M24"
+            ]
+          },
+          {
+            "text": "Bulutun bulunması, sınırının çizilmesi ve salım miktarının tahmini ayrı aşamalardır. Bir algoritmanın sonucunu okurken hangi aşamada değerlendirildiğini ve hangi veriyle sınandığını görmek, sağladığı katkıyı anlamayı kolaylaştırır.",
+            "refs": [
+              "M24",
+              "S24"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "saha",
+        "title": "13. Yer ölçümleri nasıl tamamlayıcı olur?",
+        "paragraphs": [
+          {
+            "text": "Uydu geniş bir alanı belirli geçişlerde izler. Yer sensörleri kurulu oldukları yerde zaman içindeki değişimi daha sık takip edebilir; uçak ölçümleri ise kaynak çevresinde ayrıntılı tarama sağlar. Birlikte kullanımları, farklı zaman ve alan ölçeklerini bir araya getirir.",
+            "refs": [
+              "TH15",
+              "TH17",
+              "SC23"
+            ]
+          },
+          {
+            "text": "Atık sahalarında organik maddenin ayrışması zaman içinde metan oluşumuna yol açabilir. Atığın geçmişi, sıcaklık, nem ve işletme bilgileri uzun dönem değerlendirmeye katkı sağlar. İklim ve meteoroloji verileri bu bağlamı kurmaya yardımcı olur; sahadaki salımı izlemek için gözlem kayıtları kullanılır.",
+            "refs": [
+              "PR26",
+              "SC23"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "glossary": [
+    {
+      "id": "ppb",
+      "title": "Atmosferik metan / ppb",
+      "text": "XCH₄, kuru hava sütunundaki ortalama metan oranıdır. ppb milyarda bir oranını ifade eder. Bölgesel haritayı okurken birimi, kapsanan alanı ve tarihi birlikte inceleyebilirsin.",
+      "refs": [
+        "TP",
+        "B21"
+      ]
+    },
+    {
+      "id": "ppm-m",
+      "title": "ppm·m",
+      "text": "Arka plana göre metan artışını yol uzunluğuyla birlikte ifade eden bir büyüklüktür. Metan bulutundaki artışın görüntülenmesinde kullanılır.",
+      "refs": [
+        "G21",
+        "EM25"
+      ]
+    },
+    {
+      "id": "anomali",
+      "title": "Anomali",
+      "text": "Tanımlı bir referansa göre farktır. Referans bölge, zaman aralığı ve yöntemle birlikte okunduğunda artışın nerede ve neye göre oluştuğunu gösterir.",
+      "refs": [
+        "G21",
+        "SC23"
+      ]
+    },
+    {
+      "id": "kapsama",
+      "title": "Kapsama",
+      "text": "Seçilen alanın kullanılabilir veriyle temsil edilen bölümüdür. Ortalama grafiğini kapsamayla birlikte okumak, farklı günlerin hangi alanları özetlediğini görmeyi sağlar.",
+      "refs": [
+        "TP",
+        "S24"
+      ]
+    },
+    {
+      "id": "emisyon",
+      "title": "Emisyon hızı",
+      "text": "Bir kaynaktan birim zamanda salındığı tahmin edilen metandır. kg/saat veya ton/saat olarak gösterilir; gözlem anına, kullanılan yönteme ve rüzgâr bilgisine bağlıdır.",
+      "refs": [
+        "G21",
+        "B21"
+      ]
+    },
+    {
+      "id": "belirsizlik",
+      "title": "Belirsizlik",
+      "text": "Tahminin sayısal aralığını değerlendirmeye yardımcı olur. Sağlayıcının bildirdiği aralığı ve istatistiksel tanımını birlikte okuyabilirsin.",
+      "refs": [
+        "S23",
+        "S24",
+        "B21"
+      ]
+    },
+    {
+      "id": "tespit-yok",
+      "title": "Tespit edilmedi",
+      "text": "Uygun gözlem yapılmış, ancak kullanılan yöntemin koşullarında metan tespiti bildirilmemiştir. Algılama sınırıyla birlikte okunur.",
+      "refs": [
+        "S24"
+      ]
+    },
+    {
+      "id": "veri-yok",
+      "title": "Ölçüm / veri yok",
+      "text": "Seçilen zaman ve yerde kullanılabilir gözlem bulunmadığını belirtir. Bulutluluk, kapsama ve veri yayımlama durumu bu bilginin nedenini açıklayabilir.",
+      "refs": [
+        "SC23",
+        "S24"
+      ]
+    },
+    {
+      "id": "gecikme",
+      "title": "Veri güncelliği",
+      "text": "Gözlem, yayım ve sisteme alınma tarihlerini ayrı gösterir. Yeni gelen bir kaydın hangi tarihteki olayı temsil ettiğini anlamayı sağlar.",
+      "refs": [
+        "CM26"
+      ]
+    },
+    {
+      "id": "gecis",
+      "title": "Uydu geçişi",
+      "text": "Uydunun hesaplanan geçişi bir gözlem fırsatıdır. Hedefleme, ışık ve bulutluluk gibi koşullar kullanılabilir veri oluşmasını etkiler.",
+      "refs": [
+        "G21",
+        "EM25"
+      ]
+    },
+    {
+      "id": "ortalama",
+      "title": "Kaynak ortalaması",
+      "text": "Tanımlı bir dönem ve gözlem kümesinin özetidir. Dönem, gözlem sayısı ve hesaplama yöntemiyle birlikte okunur.",
+      "refs": [
+        "UCLAM",
+        "SC23"
+      ]
+    },
+    {
+      "id": "otomatik",
+      "title": "Otomatik tespit",
+      "text": "Algoritmaların aday sinyalleri veya bulut sınırlarını seçmesidir. Tespit, sınır çıkarımı ve miktar tahmini sonuçları kendi değerlendirme ölçütleriyle gösterilir.",
+      "refs": [
+        "M24",
+        "R24"
+      ]
+    },
+    {
+      "id": "ruzgar",
+      "title": "Rüzgâr",
+      "text": "Metanın taşınmasını ve seyrelmesini etkiler. Gözlem saatine, modelin temsil ettiği yere ve yüksekliğe ait rüzgâr bilgisi görüntüyle birlikte okunur.",
+      "refs": [
+        "B21",
+        "G21"
+      ]
+    },
+    {
+      "id": "urun",
+      "title": "Ürün işlem durumu",
+      "text": "NRTI, OFFL ve RPRO gibi etiketler verinin işlenme biçimini belirtir. Kalite bilgisi, işlem sürümü ve tarih ile birlikte gösterilir.",
+      "refs": [
+        "TP",
+        "S24"
+      ]
+    }
+  ],
+  "references": [
+    {
+      "id": "G21",
+      "author": "Guanter ve arkadaşları",
+      "year": 2021,
+      "title": "Mapping methane point emissions with the PRISMA spaceborne imaging spectrometer",
+      "url": "https://doi.org/10.1016/j.rse.2021.112671",
+      "pages": "PDF s. 1, 3–8, 10–12",
+      "scope": "Görüntüleme spektroskopisiyle metan bulutlarının belirlenmesi, gözlem koşulları ve salım hızı tahmini."
+    },
+    {
+      "id": "F20",
+      "author": "Foote ve arkadaşları",
+      "year": 2020,
+      "title": "Fast and Accurate Retrieval of Methane Concentration from Imaging Spectrometer Data Using Sparsity Prior",
+      "url": "https://doi.org/10.1109/TGRS.2020.2976888",
+      "pages": "PDF s. 1, 11",
+      "scope": "Seyreklik ve albedo düzeltmesiyle metan sinyalinin çıkarılması."
+    },
+    {
+      "id": "F21",
+      "author": "Foote ve arkadaşları",
+      "year": 2021,
+      "title": "Impact of scene-specific enhancement spectra on matched filter greenhouse gas retrievals from imaging spectroscopy",
+      "url": "https://doi.org/10.1016/j.rse.2021.112574",
+      "pages": "PDF s. 1, 10",
+      "scope": "Sahneye uygun hedef spektrumlarının metan çıkarımına etkisi."
+    },
+    {
+      "id": "FR05",
+      "author": "Frankenberg, Platt ve Wagner",
+      "year": 2005,
+      "title": "Iterative maximum a posteriori (IMAP)-DOAS for retrieval of strongly absorbing trace gases",
+      "url": "https://doi.org/10.5194/acp-5-9-2005",
+      "pages": "PDF s. 1, 12–13",
+      "scope": "Gaz soğurmasının atmosfer ve sensör özellikleriyle birlikte hesaplanması."
+    },
+    {
+      "id": "TH15",
+      "author": "Thompson ve arkadaşları",
+      "year": 2015,
+      "title": "Real-time remote detection and measurement for airborne imaging spectroscopy: a case study with methane",
+      "url": "https://doi.org/10.5194/amt-8-4383-2015",
+      "pages": "PDF s. 1, 11",
+      "scope": "Uçak üzerinde görüntüleme spektroskopisiyle metan tespiti."
+    },
+    {
+      "id": "TH17",
+      "author": "Thorpe ve arkadaşları",
+      "year": 2017,
+      "title": "Airborne DOAS retrievals of methane, carbon dioxide, and water vapor concentrations at high spatial resolution: application to AVIRIS-NG",
+      "url": "https://doi.org/10.5194/amt-10-3833-2017",
+      "pages": "PDF s. 9–10",
+      "scope": "Yüksek uzamsal çözünürlüklü gaz çıkarımları ve yer ölçümleriyle birlikte inceleme."
+    },
+    {
+      "id": "B21",
+      "author": "Borchardt ve arkadaşları",
+      "year": 2021,
+      "title": "Detection and quantification of CH4 plumes using the WFM-DOAS retrieval on AVIRIS-NG hyperspectral data",
+      "url": "https://doi.org/10.5194/amt-14-1267-2021",
+      "pages": "PDF s. 1, 17–18",
+      "scope": "Metan bulutlarının çıkarımı, rüzgâr bilgisi ve miktar tahminindeki belirsizlikler."
+    },
+    {
+      "id": "SC23",
+      "author": "Schuit ve arkadaşları",
+      "year": 2023,
+      "title": "Automated detection and monitoring of methane super-emitters using satellite data",
+      "url": "https://doi.org/10.5194/acp-23-9071-2023",
+      "pages": "PDF s. 1, 17–18",
+      "scope": "Bölgesel tarama ile yüksek çözünürlüklü takibin birlikte kullanımı."
+    },
+    {
+      "id": "P23",
+      "author": "Pei ve arkadaşları",
+      "year": 2023,
+      "title": "Improving quantification of methane point source emissions from imaging spectroscopy",
+      "url": "https://doi.org/10.1016/j.rse.2023.113652",
+      "pages": "PDF s. 1, 10–12",
+      "scope": "Bulut sınırları, arka plan ve yüzey özelliklerinin miktar hesabına etkisi."
+    },
+    {
+      "id": "R24",
+      "author": "Roger ve arkadaşları",
+      "year": 2024,
+      "title": "Exploiting the entire near-infrared spectral range to improve the detection of methane plumes with high-resolution imaging spectrometers",
+      "url": "https://doi.org/10.5194/amt-17-1333-2024",
+      "pages": "PDF s. 1, 12",
+      "scope": "Geniş spektral aralık kullanılarak metan ile yüzey sinyalinin ayrılması."
+    },
+    {
+      "id": "S23",
+      "author": "Sherwin ve arkadaşları",
+      "year": 2023,
+      "title": "Single-blind validation of space-based point-source detection and quantification of onshore methane emissions",
+      "url": "https://doi.org/10.1038/s41598-023-30761-2",
+      "pages": "PDF s. 1, 5–6",
+      "scope": "Bilinen metan salımlarıyla uydu tespit ve miktar tahmininin değerlendirilmesi."
+    },
+    {
+      "id": "S24",
+      "author": "Sherwin ve arkadaşları",
+      "year": 2024,
+      "title": "Single-blind test of nine methane-sensing satellite systems from three continents",
+      "url": "https://doi.org/10.5194/amt-17-765-2024",
+      "pages": "PDF s. 1, 13–14",
+      "scope": "Farklı uydu sistemlerinin kontrollü salımlarla karşılaştırılması."
+    },
+    {
+      "id": "M24",
+      "author": "Marjani ve arkadaşları",
+      "year": 2024,
+      "title": "PRISMethaNet: A novel deep learning model for landfill methane detection using PRISMA satellite data",
+      "url": "https://doi.org/10.1016/j.isprsjprs.2024.10.003",
+      "pages": "PDF s. 1, 15–16",
+      "scope": "Derin öğrenmeyle metan bulutlarının ve sınırlarının belirlenmesi."
+    },
+    {
+      "id": "ME23",
+      "author": "Mei ve arkadaşları",
+      "year": 2023,
+      "title": "SCIATRAN software package (V4.6): update and further development of aerosol, clouds, surface reflectance databases and models",
+      "url": "https://doi.org/10.5194/gmd-16-1511-2023",
+      "pages": "PDF s. 1, 19",
+      "scope": "Atmosfer, yüzey ve sensör arasındaki ışınım aktarımını hesaplayan model altyapısı."
+    },
+    {
+      "id": "H19",
+      "author": "Roman V. Kochanov",
+      "year": 2019,
+      "title": "HITRAN Application Programming Interface (HAPI) User Guide, ver. 4.3",
+      "url": "https://hitran.org/hapi/",
+      "pages": "PDF s. 3, 20, 26–28",
+      "scope": "Moleküler soğurma spektrumlarını hesaplamak için HAPI kullanıcı kılavuzu."
+    },
+    {
+      "id": "PR26",
+      "author": "Birnstengel, Simpson ve Vogt / Prognos ve ifeu",
+      "year": 2026,
+      "title": "Methane emissions from Europe’s landfills: Scenarios and Data Challenges",
+      "url": null,
+      "pages": "PDF s. 4–7, 22–25",
+      "scope": "Atık sahalarında zamana bağlı metan oluşumuna ilişkin senaryolar ve veri gereksinimleri."
+    },
+    {
+      "id": "UCLA26",
+      "author": "UCLA STOP Methane Project",
+      "year": 2026,
+      "title": "Spotlight on Top Methane Sources in Turkey’s Waste Sector",
+      "url": "https://law.ucla.edu/news/spotlight-top-methane-sources-turkeys-waste-sector",
+      "pages": "",
+      "scope": "Türkiye’deki metan kaynaklarının tanımlı gözlem dönemine dayalı incelemesi."
+    },
+    {
+      "id": "UCLAM",
+      "author": "UCLA STOP Methane Project",
+      "year": 2026,
+      "title": "Spotlight on the Top 25 Methane Plumes in 2025: Landfills — yöntem ve Silivri–Seymen eşleştirmesi",
+      "url": "https://law.ucla.edu/news/spotlight-top-25-methane-plumes-2025-landfills",
+      "pages": "",
+      "scope": "Kaynak eşleştirmesi, gözlemlerin gruplanması ve dönem özetlerinin yöntemi."
+    },
+    {
+      "id": "GU26",
+      "author": "The Guardian",
+      "year": 2026,
+      "title": "Revealed: the methane mega-leaks from UN climate summit host Turkey",
+      "url": "https://www.theguardian.com/environment/2026/oct/05/methane-mega-leaks-from-un-climate-summit-host-turkey",
+      "pages": "",
+      "scope": "Seymen ve Silivri çevresindeki metan ölçümlerini gündeme getiren 5 Ekim 2026 tarihli haber."
+    },
+    {
+      "id": "CM26",
+      "author": "Carbon Mapper",
+      "year": 2026,
+      "title": "Product Guide: Data Definition & Specification, v1.1.7",
+      "url": "https://carbonmapper.org/articles/product-guide",
+      "pages": "",
+      "scope": "Ürün türleri, gözlem ve kaynak kaydı tanımları, zaman alanları ve veri yayımlama düzeni."
+    },
+    {
+      "id": "TP",
+      "author": "TROPOMI / KNMI",
+      "year": 2026,
+      "title": "Methane (L2__CH4___) — ürün belgeleri",
+      "url": "https://www.tropomi.eu/data-products/methane",
+      "pages": "",
+      "scope": "TROPOMI metan ürünü, XCH₄, kalite değişkenleri ve ürün özellikleri."
+    },
+    {
+      "id": "EM25",
+      "author": "NASA / JPL",
+      "year": 2025,
+      "title": "EMIT Level 2B Greenhouse Gas Data Product User Guide, Second Release",
+      "url": "https://lpdaac.usgs.gov/documents/2250/EMIT_L2B_GHG_User_Guide_V2.pdf",
+      "pages": "s. 7–12",
+      "scope": "EMIT metan artış haritaları, bulut ürünleri ve ürünler arasındaki ilişki."
+    },
+    {
+      "id": "ERA5",
+      "author": "ECMWF / Copernicus Climate Change Service",
+      "year": 2026,
+      "title": "ERA5 hourly data on single levels",
+      "url": "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels",
+      "pages": "",
+      "scope": "Saatlik yeniden analiz verileri, değişkenler, zaman ve yer örneklemi."
+    },
+    {
+      "id": "OMH",
+      "author": "Open-Meteo",
+      "year": 2026,
+      "title": "Historical Weather API",
+      "url": "https://open-meteo.com/en/docs/historical-weather-api",
+      "pages": "",
+      "scope": "Geçmiş meteoroloji, ERA5 model seçimi, değişkenler ve kaynak açıklamaları."
+    },
+    {
+      "id": "OMF",
+      "author": "Open-Meteo",
+      "year": 2026,
+      "title": "Weather Forecast API",
+      "url": "https://open-meteo.com/en/docs",
+      "pages": "",
+      "scope": "Saatlik hava tahminleri, değişkenler, birimler ve model seçenekleri."
+    }
+  ],
+  "observationSchema": {
+    "status": "detected | not_detected | invalid | no_observation | not_connected",
+    "scope": "plume | source_summary",
+    "fields": [
+      "id",
+      "provider",
+      "sensor",
+      "observedAt (ISO 8601 + zaman dilimi)",
+      "publishedAt",
+      "ingestedAt",
+      "locationLabel",
+      "sourceAttribution (verified | candidate | unknown)",
+      "emission.value",
+      "emission.unit (kg/h | t/h)",
+      "emission.uncertainty.value",
+      "emission.uncertainty.label",
+      "sourceUrl",
+      "qualityNote",
+      "windNote",
+      "sector (solid_waste | other | unknown)",
+      "validObservationConfirmed"
+    ]
+  },
+  "contentVersion": "2026-11-01-insight-2",
+  "insights": {
+    "title": "Metan verilerini okumak",
+    "subtitle": "Araştırmalardan haritaya",
+    "lead": "Bir harita, doğru sorularla daha fazla bilgi verir. Bu rehber, bilimsel araştırmalardan çıkan bulguları ölçümleri incelerken kullanabileceğin kısa okuma adımlarına dönüştürür.",
+    "sections": [
+      {
+        "id": "olcek",
+        "title": "Bölgesel artıştan kaynak ayrıntısına",
+        "paragraphs": [
+          {
+            "text": "Bölgesel bir metan artışı, daha ayrıntılı inceleme için başlangıç noktası olabilir. TROPOMI gibi geniş alan tarayan bir sensördeki örüntüyü, aynı çevrenin yüksek çözünürlüklü bulut kayıtlarıyla birlikte incelemek yerel kaynakları ayırt etmeye yardımcı olur.",
+            "refs": [
+              "SC23",
+              "G21"
+            ]
+          },
+          {
+            "text": "Haritada önce bölgesel katmanı, sonra kaynak bulutlarını aç. Her birinin tarihini ve temsil ettiği alanı kontrol ederek hangi bilginin bölgesel, hangisinin tek gözleme ait olduğunu görebilirsin.",
+            "refs": [
+              "SC23",
+              "TP"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "bicim",
+        "title": "Bulutun biçimi, taşınım hakkında bilgi taşır",
+        "paragraphs": [
+          {
+            "text": "Bulutun uzanışı rüzgâr ve taşınımın sonucudur. Aynı salım miktarı farklı hava koşullarında farklı görünebilir. Bulutun daha parlak veya daha geniş olmasıyla salım hızını karşılaştırırken rüzgârı, birimi ve kullanılan renk ölçeğini de incele.",
+            "refs": [
+              "G21",
+              "B21",
+              "P23"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tekrar",
+        "title": "Tekrarlanan gözlemler bir örüntü oluşturur",
+        "paragraphs": [
+          {
+            "text": "Farklı tarihlerde aynı kaynak çevresinde görülen uygun tespitler, salımın tekrarına ilişkin bilgi sağlar. Tespit sayısını kullanılabilir gözlem sayısıyla birlikte değerlendirmek, yalnızca bulut sayısını karşılaştırmaktan daha açıklayıcıdır.",
+            "refs": [
+              "SC23",
+              "S24"
+            ]
+          },
+          {
+            "text": "Yalnızca tespit kataloğuna erişiliyorsa zaman çizelgesi tespit edilen bulutları gösterebilir. Tespit oranı için uygun olup tespit bildirmeyen gözlemlerin de bilinmesi gerekir.",
+            "refs": [
+              "S24",
+              "EM25"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "karsilastirma",
+        "title": "İki tarih arasındaki farkı koşullarıyla oku",
+        "paragraphs": [
+          {
+            "text": "Emisyon tahmini, belirsizlik aralığı, sensör ve gözlem koşulları birlikte incelendiğinde iki kayıt arasındaki fark daha anlamlı olur. Benzer yöntem ve koşullardaki tekrarlar, zaman içindeki değişimin incelenmesine katkı sağlar.",
+            "refs": [
+              "S23",
+              "S24",
+              "B21"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "kapsama",
+        "title": "Haritanın ne kadarının ölçüldüğüne bak",
+        "paragraphs": [
+          {
+            "text": "Bir Türkiye ortalaması, o gün kullanılabilen piksellerin özetidir. Kapsama değişiyorsa sayı farklı bölgelerin etkisini taşıyabilir. Ortalama grafiğini kapsama grafiğiyle birlikte okumak ve ortak alan karşılaştırmalarını tercih etmek daha açıklayıcıdır.",
+            "refs": [
+              "TP",
+              "B21"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "hava",
+        "title": "Hava bilgisi görüntünün bağlamını kurar",
+        "paragraphs": [
+          {
+            "text": "Gözlem saatine ait rüzgâr, bulutun taşınmasını; bulutluluk ve güneş koşulları da ölçüm fırsatını anlamaya yardımcı olur. Güncel hava tahmini, yeni bir gözlem fırsatını planlamak için kullanılabilir. Geçmiş bir bulutu incelerken o tarihin meteorolojisi seçilir.",
+            "refs": [
+              "G21",
+              "B21",
+              "S24"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "araclar",
+        "title": "Birden fazla erişim yolu ile bağımsız gözlemi ayır",
+        "paragraphs": [
+          {
+            "text": "Aynı görüntü birden fazla veri portalında bulunabilir. Kayıt ve sensör kimliği, bunların aynı gözlem olup olmadığını gösterir. Ayrı tarih ve sensörlerden gelen uygun gözlemler bir arada sunulduğunda kaynak hakkında daha zengin bir zaman çizelgesi oluşur.",
+            "refs": [
+              "EM25",
+              "CM26",
+              "SC23"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "takip",
+        "title": "Bir gözlemden sonra neye bakabilirsin?",
+        "paragraphs": [
+          {
+            "text": "Özgün kaydı aç, aynı kaynağın diğer gözlemlerini incele ve gözlem saatinin hava koşullarını karşılaştır. Uygun saha ölçümleri varsa bunları zaman ve ölçtükleri büyüklükle birlikte ekle. Bu adımlar tek bir görüntüyü zamana yayılan izlemeye dönüştürür.",
+            "refs": [
+              "SC23",
+              "TH15",
+              "TH17"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "weatherClimate": {
+    "title": "Hava ve iklim verileri nasıl okunur?",
+    "subtitle": "Gözlem anı, tahmin ve uzun dönem bağlamı",
+    "lead": "Rüzgâr ve hava koşulları metanın taşınmasını ve uydunun onu görme koşullarını etkiler. Uzun dönem iklim bilgileri ise seçilen yerin mevsimsel özelliklerini anlamaya yardımcı olur.",
+    "sections": [
+      {
+        "id": "gozlem-ani",
+        "title": "Gözlem anının hava koşulları",
+        "paragraphs": [
+          {
+            "text": "Bir bulut seçtiğinde, meteoroloji de aynı yer ve gözlem zamanına göre okunur. Rüzgârın hızı ve yönü, bulutluluk, sıcaklık ve varsa sınır tabakası yüksekliği birlikte gösterilir. Modelin temsil ettiği saat, yer örneği ve yükseklik bilgisi karşılaştırmanın bağlamıdır.",
+            "refs": [
+              "B21",
+              "G21",
+              "ERA5"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ruzgar-yonu",
+        "title": "Rüzgâr yönü ve taşınma yönü",
+        "paragraphs": [
+          {
+            "text": "Meteorolojide rüzgâr yönü, rüzgârın geldiği yönü belirtir. Metan bulutunun taşındığı yön bunun karşı yönüdür. Haritadaki okların hangisini gösterdiğini lejanttan okuyabilirsin.",
+            "refs": [
+              "ERA5",
+              "OMH"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "karisim",
+        "title": "Seyrelme ve düşey karışım",
+        "paragraphs": [
+          {
+            "text": "Rüzgâr hızı ve atmosferin karışım koşulları, metanın nasıl yayıldığını etkiler. Sınır tabakası yüksekliği bu bağlam için kullanılan göstergelerden biridir. Bu bilgiyi bulut görüntüsüyle birlikte incelemek, görülen yoğunluk değişimini anlamaya yardımcı olur.",
+            "refs": [
+              "B21",
+              "G21",
+              "ERA5"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "veri-turu",
+        "title": "Tahmin ile yeniden analiz",
+        "paragraphs": [
+          {
+            "text": "Tahmin, gelecekte beklenen hava koşullarını verir. Yeniden analiz, geçmiş gözlemler ile atmosfer modellerini birleştirerek geçmiş hava koşullarının tutarlı bir kaydını oluşturur. ERA5 geçmiş olayları incelemek için kullanılan yeniden analizlerden biridir.",
+            "refs": [
+              "ERA5",
+              "OMH",
+              "OMF"
+            ]
+          },
+          {
+            "text": "Meteoroloji kartında kullanılan modelin adı ve veri türü gösterilir. Geçmiş bir görüntü için yeniden analiz henüz hazır değilse bu durum belirtilir; güncel tahmin o geçmiş gözlemin yerine konmaz.",
+            "refs": [
+              "ERA5",
+              "OMH"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "iklim",
+        "title": "Uzun dönem iklim bağlamı",
+        "paragraphs": [
+          {
+            "text": "1991–2020 dönemi gibi sabit bir referans aralığından hesaplanan aylık sıcaklık, yağış ve rüzgâr özetleri, bir yerin mevsimsel düzenini görmeye yardımcı olur. Seçilen ayı aynı ayın uzun dönem özetiyle karşılaştırmak, olağan hava örüntülerinden farkını gösterir.",
+            "refs": [
+              "ERA5",
+              "OMH"
+            ]
+          },
+          {
+            "text": "Bu karşılaştırmada aynı veri ailesi, konum ve hesaplama yöntemi kullanılır. Sıcaklık farkı °C, yağış ise seçilen dönem toplamı ve birimiyle gösterilir. İklim grafiği, metan gözlemlerini çevresel bağlamı içinde okumaya eşlik eder.",
+            "refs": [
+              "ERA5",
+              "OMH"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "birlikte",
+        "title": "Haritada birlikte incele",
+        "paragraphs": [
+          {
+            "text": "Bir yer veya bulut seç; gözlem anındaki meteorolojiyi, aynı kaynağın diğer kayıtlarını ve aylık iklim özetini yan yana aç. Her karttaki tarih, model, birim ve kaynak bağlantısı hangi bilgileri karşılaştırdığını gösterir.",
+            "refs": [
+              "G21",
+              "B21",
+              "SC23",
+              "ERA5"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "interfaceCopy": {
+    "mainNavigation": [
+      "Harita",
+      "Veriyi Anlamak",
+      "Uydular Nasıl Ölçer?",
+      "Hava ve İklim",
+      "Seymen",
+      "Kaynaklar"
+    ],
+    "pinnedTitle": "Haritadaki metan verilerini nasıl okuyabilirim?",
+    "pinnedSummary": "Ölçümün tarihini, birimini ve hava koşullarını birlikte inceleyerek başla.",
+    "weatherTabs": [
+      "Gözlem Anı",
+      "Güncel / Tahmin",
+      "İklim Bağlamı"
+    ],
+    "weatherLead": "Bir gözlem veya harita noktası seçerek hava koşullarını incele.",
+    "climateLead": "Seçilen yerin aylık sıcaklık, yağış ve rüzgâr özetini 1991–2020 referansıyla karşılaştır.",
+    "passLabel": "Olası gözlem fırsatı",
+    "offlLabel": "Çevrimdışı işlenmiş ürün (OFFL)",
+    "loading": "Veri alınıyor…",
+    "empty": "Bu seçim için kayıt bulunamadı.",
+    "unavailable": "Veri şu anda alınamıyor.",
+    "unconfigured": "Bu veri kaynağı henüz bağlanmamış.",
+    "cached": "Son alınan veri gösteriliyor.",
+    "alertTitle": "İzleme bildirimleri",
+    "newHistoricalRecord": "Geçmiş bir gözlem yeni yayımlandı.",
+    "newObservation": "Yeni gözlem kaydı alındı."
+  }
+}

@@ -111,13 +111,25 @@ def normalize_cm_plume(p, ingested_at=None):
         }
 
     instrument = _text(p.get("instrument"))
+    version = " · ".join(x for x in (
+        _text(p.get("collection")),
+        f"emisyon {p['emission_version']}" if _text(p.get("emission_version")) else None,
+        f"yazılım {p['processing_software']}" if _text(p.get("processing_software")) else None,
+    ) if x)
     return {
         "id": pid,
+        "providerId": pid,
         "status": "detected",
         "scope": "plume",
+        "gas": _text(p.get("gas")) or "CH4",
         "provider": CM_PROVIDER,
         "sensor": CM_SENSORS.get(instrument) or _text(p.get("platform")),
         "instrument": instrument,
+        "platform": _text(p.get("platform")),
+        "processingVersion": version or None,
+        "modifiedAt": parse_time(p.get("modified")),
+        "gsdM": parse_number(p.get("gsd")),
+        "sensitivityMode": _text(p.get("sensitivity_mode")),
         "sceneId": _text(p.get("scene_id")),
         "observedAt": parse_time(p.get("scene_timestamp")),
         "publishedAt": parse_time(p.get("published_at")),
@@ -135,6 +147,62 @@ def normalize_cm_plume(p, ingested_at=None):
         "sectorCode": _text(p.get("sector")),
         "validObservationConfirmed": False,
     }
+
+
+def normalize_cm_source(feature):
+    """Carbon Mapper kaynak özeti (sources.geojson). Tek bulut değildir; scope=source_summary.
+
+    Sağlayıcı alanları (01.11.2026 canlı yanıtla doğrulandı): avg_emission_auto tespit edilen bulutların
+    ortalaması; emission_auto = avg_emission_auto × persistence (tespit tarihi / gözlem tarihi)."""
+    p = feature.get("properties") or {}
+    coords = (feature.get("geometry") or {}).get("coordinates") or []
+    lon = parse_number(coords[0]) if len(coords) > 0 else None
+    lat = parse_number(coords[1]) if len(coords) > 1 else None
+    name = _text(p.get("source_name"))
+    if not name or lon is None or lat is None:
+        return None
+    # Sağlayıcı source_name içine isteğin sorgu dizesini ekleyebiliyor; kimlik yalnızca ilk bölümdür
+    sid = name.split("?", 1)[0]
+
+    def rate(value, unc):
+        v = parse_rate(value)
+        if v is None:
+            return None
+        u = parse_rate(unc)
+        return {"value": v, "unit": "kg/h", "uncertainty": {"value": u, "label": None} if u is not None else None}
+
+    return {
+        "id": f"cmsrc:{sid}",
+        "providerId": sid,
+        "status": "detected",
+        "scope": "source_summary",
+        "gas": _text(p.get("gas")) or "CH4",
+        "provider": CM_PROVIDER,
+        "lat": lat,
+        "lon": lon,
+        "locationLabel": f"{lat:.3f}° K, {lon:.3f}° D".replace(".", ","),
+        "sector": _sector(p.get("sector")),
+        "sectorCode": _text(p.get("sector")),
+        "plumeIds": [x for x in (p.get("plume_ids") or []) if isinstance(x, str)],
+        "plumeCount": parse_number(p.get("plume_count")),
+        "detectionDateCount": parse_number(p.get("detection_date_count")),
+        "observationDateCount": parse_number(p.get("observation_date_count")),
+        "persistence": parse_number(p.get("persistence")),
+        "detectedMean": rate(p.get("avg_emission_auto"), p.get("avg_emission_uncertainty_auto")),
+        "persistenceWeighted": rate(p.get("emission_auto"), p.get("emission_uncertainty_auto")),
+        "firstObserved": _text(p.get("timestamp_min")),
+        "lastObserved": _text(p.get("timestamp_max")),
+        "firstPublished": _text(p.get("published_at_min")),
+        "lastPublished": _text(p.get("published_at_max")),
+        "clusterRadiusM": _cluster_radius(sid),
+        "sourceAttribution": "unknown",
+        "sourceUrl": f"https://data.carbonmapper.org/#12/{lat:.4f}/{lon:.4f}",
+    }
+
+
+def _cluster_radius(sid):
+    m = re.search(r"_(\d+)m_", sid)
+    return int(m.group(1)) if m else None
 
 
 def observation_key(o):
