@@ -100,7 +100,7 @@ JSON'dan hazırlanmış statik HTML'dir; JavaScript kapalıyken de okunur, kayna
 birlikte güncellenmelidir. Harita detayındaki kavram açıklamaları aynı JSON'un `glossary` alanından okunur.
 HTML/JS/CSS/JSON yanıtları `Cache-Control: no-cache` ile her açılışta yeniden doğrulanır.
 
-Testler: `python -m unittest discover -s tests` ve `node --test tests/content.test.js`.
+Testler: `python -m unittest discover -s tests` ve `node --test tests/content.test.js tests/geo.test.js`.
 
 ## Erişimler (yalnızca sunucu ortam değişkenleri)
 

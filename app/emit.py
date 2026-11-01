@@ -109,6 +109,7 @@ def normalize(meta_feature, umm, concept_id, granule_concept_id, version, urls, 
         "granule": umm.get("GranuleUR"),
         "sceneNames": p.get("DAAC Scene Names") or [],
         "imageUrl": urls.get("png"),
+        "thumbnail": {"url": urls["png"], "kind": "NASA EMIT bulut kompleksi görüntüsü"} if urls.get("png") else None,
         "validObservationConfirmed": False,
     }
 

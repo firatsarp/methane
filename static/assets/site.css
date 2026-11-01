@@ -30,37 +30,37 @@ body { background: var(--shell); color: var(--text); }
 .skip:focus { top: 8px; }
 
 /* ---- Üst gezinme --------------------------------------------------------------- */
-/* Renkler sabit yazılır: sayfaya özgü CSS değişkenleri (ör. açık zeminli okuma sayfaları) çubuğu etkilemesin. */
+/* Renkler sabit yazılır: sayfaya özgü CSS değişkenleri çubuğu etkilemesin. */
 .topbar {
   position: fixed; inset: 0 0 auto 0; z-index: 1000; height: var(--topbar-h);
   display: flex; align-items: center; gap: 16px; padding: 0 16px;
-  background: #101f29; color: #f4f8fa; border-bottom: 1px solid #334853;
-  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #ffffff; color: #172b3a; border-bottom: 1px solid #dce3e9;
+  font: 14px/1.4 "Segoe UI", Inter, system-ui, -apple-system, Roboto, sans-serif;
 }
-.brand { display: flex; align-items: center; gap: 10px; color: #f4f8fa; text-decoration: none; font-weight: 700; white-space: nowrap; min-height: 44px; }
-.brand i { width: 22px; height: 22px; border-radius: 50%; background: #ed7953; box-shadow: 0 0 0 4px rgba(237,121,83,.18); flex-shrink: 0; }
-.brand small { display: block; font-weight: 400; font-size: 11px; color: #afc0c9; }
+.brand { display: flex; align-items: center; gap: 10px; color: #172b3a; text-decoration: none; font-weight: 700; white-space: nowrap; min-height: 44px; }
+.brand i { width: 22px; height: 22px; border-radius: 50%; background: #d95c36; box-shadow: 0 0 0 4px #fff0e9; flex-shrink: 0; }
+.brand small { display: block; font-weight: 400; font-size: 12px; color: #526575; }
 .site-menu { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .site-menu a, .mobile-links a {
   display: flex; align-items: center; min-height: 44px; padding: 0 12px;
-  border-radius: 8px; color: #d3dde6; text-decoration: none; font-size: 14px; white-space: nowrap;
+  border-radius: 10px; color: #33495a; text-decoration: none; font-size: 14px; white-space: nowrap;
 }
-.site-menu a:hover, .mobile-links a:hover { background: #263d4a; color: #fff; }
-.site-menu a[aria-current="page"], .mobile-links a[aria-current="page"] { background: #294451; color: #ffb598; box-shadow: inset 0 -3px 0 #ed7953; }
-.topbar a:focus-visible, .topbar summary:focus-visible { outline: 3px solid #df8059; outline-offset: 2px; }
+.site-menu a:hover, .mobile-links a:hover { background: #f6f8fa; color: #172b3a; }
+.site-menu a[aria-current="page"], .mobile-links a[aria-current="page"] { background: #fff0e9; color: #a8401c; font-weight: 600; }
+.topbar a:focus-visible, .topbar summary:focus-visible { outline: 3px solid #d95c36; outline-offset: 2px; }
 /* Telefon menüsü JavaScript gerektirmez (details/summary) */
 .mobile-menu { display: none; margin-left: auto; }
 .mobile-menu > summary {
   list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; cursor: pointer;
-  border: 1px solid #526c79; border-radius: 8px; color: #f4f8fa; font-weight: 650;
+  border: 1px solid #dce3e9; border-radius: 10px; color: #172b3a; font-weight: 650; background: #fff;
 }
 .mobile-menu > summary::-webkit-details-marker { display: none; }
 .mobile-menu > summary::before { content: "☰"; }
 .mobile-menu[open] > summary::before { content: "×"; }
 .mobile-links {
   position: fixed; top: var(--topbar-h); left: 0; right: 0; max-height: calc(100dvh - var(--topbar-h)); overflow: auto;
-  display: flex; flex-direction: column; gap: 4px; padding: 10px 14px 16px;
-  background: #101f29; border-bottom: 1px solid #334853; box-shadow: 0 16px 30px rgba(0,0,0,.45);
+  display: flex; flex-direction: column; gap: 4px; padding: 8px 12px 16px;
+  background: #ffffff; border-bottom: 1px solid #dce3e9; box-shadow: 0 16px 30px rgba(23, 43, 58, .16);
 }
 .mobile-links a { font-size: 16px; padding: 0 14px; }
 @media (max-width: 1100px) {
@@ -68,9 +68,10 @@ body { background: var(--shell); color: var(--text); }
   .mobile-menu { display: block; }
 }
 @media (max-width: 600px) {
+  :root { --topbar-h: 56px; }
   .topbar { padding: 0 12px; gap: 10px; }
-  .brand { font-size: 13px; }
-  .brand small { font-size: 10px; }
+  .brand { font-size: 14px; }
+  .brand small { font-size: 11px; }
 }
 
 /* ---- Ortak bileşenler ------------------------------------------------------------- */

@@ -53,6 +53,9 @@ def _cm_item(row, source_of):
 def _emit_item(row):
     _, footprint, raw, tr = row
     o = json.loads(raw)
+    # Önceki sürümde alınan EMIT kayıtları görüntü bağlantısını yalnızca imageUrl alanında taşır
+    if not o.get("thumbnail") and o.get("imageUrl"):
+        o["thumbnail"] = {"url": o["imageUrl"], "kind": "NASA EMIT bulut kompleksi görüntüsü"}
     o.update({
         "canonicalObservationId": o["id"],
         "tr": bool(tr),
@@ -89,6 +92,8 @@ def merge_emit(cm_items, emit_items):
         used.add(best["id"])
         best["accessPaths"].append({**e["accessPaths"][0], "matchDistanceM": round(best_d)})
         best["footprint"] = e["footprint"]
+        if not best.get("thumbnail"):
+            best["thumbnail"] = e.get("thumbnail")
         best["alternateEstimates"].append({
             "provider": e["provider"], "id": e.get("providerId"), "emission": e.get("emission"),
             "maxEnhancement": e.get("maxEnhancement"), "windNote": e.get("windNote"),
@@ -109,7 +114,20 @@ def load(scope="tr"):
     if scope == "tr":
         items = [o for o in items if o["tr"]]
     sources = {s["id"]: {**s, "tr": bool(tr)} for s, tr in srcs if scope != "tr" or tr}
+    _attach_source_views(items, sources)
     return items, sources
+
+
+def _attach_source_views(items, sources):
+    """Kaynak kartı için: sunulan kapsamdaki bağlı gözlem sayısı ve en son gözlemin gerçek görüntüsü."""
+    by_source = {}
+    for o in items:
+        if o.get("sourceId") in sources:
+            by_source.setdefault(o["sourceId"], []).append(o)
+    for sid, s in sources.items():
+        linked = sorted(by_source.get(sid, []), key=lambda o: o.get("observedAt") or "", reverse=True)
+        s["linkedObservations"] = len(linked)
+        s["thumbnail"] = next((o["thumbnail"] for o in linked if o.get("thumbnail")), None)
 
 
 def facets(items):

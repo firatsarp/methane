@@ -129,6 +129,9 @@ def normalize_cm_plume(p, ingested_at=None):
         "processingVersion": version or None,
         "modifiedAt": parse_time(p.get("modified")),
         "gsdM": parse_number(p.get("gsd")),
+        # Sağlayıcının yayımladığı bulut görüntüsü (yüzey görüntüsü üzerine bindirilmiş); imzalı, süreli bağlantı
+        "thumbnail": {"url": _text(p.get("plume_rgb_png")), "kind": "Carbon Mapper bulut görüntüsü (yüzey üzerine)"}
+        if _text(p.get("plume_rgb_png")) else None,
         "sensitivityMode": _text(p.get("sensitivity_mode")),
         "sceneId": _text(p.get("scene_id")),
         "observedAt": parse_time(p.get("scene_timestamp")),

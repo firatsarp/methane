@@ -1,5 +1,6 @@
-/* Harita sayfası: TROPOMI katmanı, gözlem filtreleri/listesi, detay çekmecesi, izleme bildirimleri, veri durumu. */
-(function () {
+/* Harita sayfası. Kapsam yalnızca Türkiye: kamera sınırı, ülke dışı maske, sunucuda scope=tr kayıtları.
+   Harita, liste, sayaç ve CSV aynı sunucu filtresinden gelen kayıt kümesini kullanır. */
+(async function () {
   "use strict";
   const F = window.Fmt;
   const { esc, fmtNum, fmtLocal, fmtUtc, fmtShort, fmtDay, getJSON, latestOnly } = F;
@@ -9,81 +10,136 @@
   const MAP_STATE_KEY = "metan.mapState";
   const PLASMA = ["#0d0887", "#5c01a6", "#9c179e", "#cc4778", "#ed7953", "#fdb42f", "#f0f921"];
   const DIVERGING = ["#2166ac", "#67a9cf", "#d1e5f0", "#f7f7f7", "#fddbc7", "#ef8a62", "#b2182b"];
-  const SAT_COLORS = { s5p: "#5cc28a", iss: "#9cc7ff" };
+  const SAT_COLORS = { s5p: "#1d6b3e", iss: "#2f5f93" };
   const SECTORS = {
     "1A1": "Enerji (elektrik / ısı)", "1B1a": "Kömür madenciliği", "1B2": "Petrol ve gaz", "4B": "Hayvancılık (gübre)",
     "6A": "Katı atık (depolama sahası)", "6B": "Atık su", unknown: "Sektör belirtilmemiş",
   };
   const PRODUCT = { OFFL: "Çevrimdışı işlenmiş ürün (OFFL)", NRTI: "Hızlı işlenmiş ürün (NRTI)" };
-  const PLUME_IMG_ZOOM = 8;
-  const PAGE = 30;
+  const BASEMAPS = {
+    light: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}"],
+    dark: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"],
+  };
+  const MASK_COLOR = { light: "#e9edf1", dark: "#1d2733" };
+  const PLUME_IMG_ZOOM = 9;
+  const CLUSTER_MAX_ZOOM = 9;
+  const PAGE = 40;
+  const MOBILE = () => matchMedia("(max-width: 860px)").matches;
   const sectorName = (c) => SECTORS[c] ?? (c ? `IPCC ${c}` : SECTORS.unknown);
 
-  // ---- Durum ve URL ----------------------------------------------------------------
-  const state = {
-    days: [], dayIdx: -1, mode: "day", view: "abs", data: null, passes: [], selPass: null,
-    items: [], facets: null, total: 0, shown: PAGE, selected: null, sources: [], content: null,
-  };
-  const filterIds = { sector: "f-sector", sensor: "f-sensor", days: "f-period", sort: "f-sort" };
-
-  function readUrl() {
+  // ---- Durum ve URL -----------------------------------------------------------------
+  const readUrl = () => {
     const q = new URLSearchParams(location.search);
     return {
       sector: q.get("sector") || "", sensor: q.get("sensor") || "", days: q.get("days") || "",
-      sort: q.get("sort") || "observed", em: q.get("em") === "1", sel: q.get("sel"),
-      day: q.get("day"), mode: q.get("mode") || "day", view: q.get("view") || "abs",
-      tropomi: q.get("tropomi") !== "0", sources: q.get("sources") === "1",
-      map: q.get("map"), src: q.get("src"),
+      sort: q.get("sort") || "observed", em: q.get("em") === "1", sel: q.get("sel"), src: q.get("src"),
+      tab: q.get("tab") === "src" ? "src" : "obs", day: q.get("day"), mode: q.get("mode") || "day",
+      view: q.get("view") === "anom" ? "anom" : "abs", tropomi: q.get("tropomi") === "1",
+      op: Number(q.get("op")) || 55, base: q.get("base") === "dark" ? "dark" : "light", sats: q.get("sats") === "1",
+      results: q.get("results") !== "0", map: q.get("map"),
     };
-  }
+  };
   const initial = readUrl();
+  const state = {
+    filters: { sector: initial.sector, sensor: initial.sensor, days: initial.days, em: initial.em },
+    sort: ["observed", "published", "emission"].includes(initial.sort) ? initial.sort : "observed",
+    tab: initial.tab, items: [], all: [], sources: [], facets: null, total: 0, shown: PAGE,
+    selected: null, selectedSource: null, resultsOpen: initial.results,
+    days: [], dayIdx: -1, mode: ["day", "7", "30", "90"].includes(initial.mode) ? initial.mode : "day", view: initial.view,
+    data: null, passes: [], selPass: null, content: null, base: initial.base, scroll: 0,
+  };
 
-  function writeUrl() {
+  function urlParams() {
     const q = new URLSearchParams();
-    for (const [k, id] of Object.entries(filterIds)) {
-      const v = $(id).value;
-      if (v && !(k === "sort" && v === "observed")) q.set(k, v);
-    }
-    if ($("f-emission").checked) q.set("em", "1");
+    const f = state.filters;
+    if (f.sector) q.set("sector", f.sector);
+    if (f.sensor) q.set("sensor", f.sensor);
+    if (f.days) q.set("days", f.days);
+    if (f.em) q.set("em", "1");
+    if (state.sort !== "observed") q.set("sort", state.sort);
+    if (state.tab === "src") q.set("tab", "src");
     if (state.selected) q.set("sel", state.selected);
-    const day = state.days[state.dayIdx]?.day;
-    if (day) q.set("day", day);
-    if (state.mode !== "day") q.set("mode", state.mode);
-    if (state.view !== "abs") q.set("view", state.view);
-    if (!$("show-tropomi").checked) q.set("tropomi", "0");
-    if ($("show-sources").checked) q.set("sources", "1");
-    if (window.mapReady) {
+    if (state.selectedSource) q.set("src", state.selectedSource);
+    if ($("show-tropomi").checked) {
+      q.set("tropomi", "1");
+      const day = state.days[state.dayIdx]?.day;
+      if (day) q.set("day", day);
+      if (state.mode !== "day") q.set("mode", state.mode);
+      if (state.view !== "abs") q.set("view", state.view);
+      q.set("op", $("t-opacity").value);
+    }
+    if (state.base !== "light") q.set("base", state.base);
+    if ($("show-sats").checked) q.set("sats", "1");
+    if (!state.resultsOpen) q.set("results", "0");
+    if (mapReady) {
       const c = map.getCenter();
       q.set("map", `${map.getZoom().toFixed(2)}/${c.lat.toFixed(4)}/${c.lng.toFixed(4)}`);
     }
-    const s = q.toString() ? `?${q}` : "";
-    history.replaceState(null, "", location.pathname + s);
+    return q.toString() ? `?${q}` : "";
+  }
+  function writeUrl(push = false) {
+    const s = urlParams();
+    if (s === location.search) return;
+    history[push ? "pushState" : "replaceState"](null, "", location.pathname + s);
     try { sessionStorage.setItem(MAP_STATE_KEY, s); } catch (e) { /* oturum deposu kapalıysa yalnızca URL kullanılır */ }
   }
 
-  // ---- Harita ----------------------------------------------------------------------
-  const startView = (() => {
+  // ---- Türkiye sınırı ve harita --------------------------------------------------------
+  let geo;
+  try { geo = await window.TurkeyGeo.load("/turkey.geojson"); }
+  catch (e) { $("cards").innerHTML = `<p class="empty">Harita sınırı yüklenemedi: ${esc(e.message)}. Sayfayı yenileyin.</p>`; return; }
+
+  let mapReady = false;
+  function viewPadding() {
+    if (MOBILE()) {
+      const sheet = $("results").hidden ? 0 : $("results").getBoundingClientRect().height || 112;
+      return { top: 70, left: 16, right: 16, bottom: Math.min(sheet, window.innerHeight * 0.5) + 16 };
+    }
+    const panel = !$("detail").hidden ? $("detail").offsetWidth : state.resultsOpen ? $("results").offsetWidth : 0;
+    return { top: 84, left: window.innerWidth < 900 ? 24 : 72, right: panel ? panel + 32 : 24, bottom: 48 };
+  }
+  const startCam = (() => {
     const m = (initial.map || "").split("/").map(Number);
-    return m.length === 3 && m.every(Number.isFinite) ? { zoom: m[0], center: [m[2], m[1]] } : null;
+    if (m.length !== 3 || !m.every(Number.isFinite)) return null;
+    // Eski kamera Türkiye kapsamı dışındaysa kullanılmaz; açılış ülke görünümüne döner
+    const [[w, s], [e, n]] = geo.maxBounds;
+    return m[2] >= w && m[2] <= e && m[1] >= s && m[1] <= n ? { zoom: m[0], center: [m[2], m[1]] } : null;
   })();
+
   const map = new maplibregl.Map({
     container: "map",
     style: {
       version: 8,
       sources: {
-        base: { type: "raster", tileSize: 256, maxzoom: 16, attribution: "Harita © Esri, HERE, Garmin, © OpenStreetMap katkıcıları",
-          tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"] },
-        labels: { type: "raster", tileSize: 256, maxzoom: 16,
-          tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"] },
+        "base-light": { type: "raster", tileSize: 256, maxzoom: 16, tiles: [BASEMAPS.light[0]], attribution: "Harita © Esri, HERE, Garmin, © OpenStreetMap katkıcıları" },
+        "labels-light": { type: "raster", tileSize: 256, maxzoom: 16, tiles: [BASEMAPS.light[1]] },
+        "base-dark": { type: "raster", tileSize: 256, maxzoom: 16, tiles: [BASEMAPS.dark[0]] },
+        "labels-dark": { type: "raster", tileSize: 256, maxzoom: 16, tiles: [BASEMAPS.dark[1]] },
       },
-      layers: [{ id: "base", type: "raster", source: "base" }, { id: "labels", type: "raster", source: "labels" }],
+      layers: [
+        { id: "base-light", type: "raster", source: "base-light" },
+        { id: "base-dark", type: "raster", source: "base-dark", layout: { visibility: "none" } },
+      ],
     },
-    ...(startView || { bounds: [[26, 35.8], [44.8, 42.1]], fitBoundsOptions: { padding: 30 } }),
-    attributionControl: { compact: true },
+    // Tanımsız center/zoom anahtarı verilirse kamera NaN olur; yalnızca geçerli olan seçenek eklenir
+    ...(startCam ? { center: startCam.center, zoom: startCam.zoom } : { bounds: geo.bounds, fitBoundsOptions: { padding: viewPadding() } }),
+    maxBounds: geo.maxBounds,
+    attributionControl: { compact: false },
+    dragRotate: false, pitchWithRotate: false, touchPitch: false,
   });
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-  const empty = () => ({ type: "FeatureCollection", features: [] });
+  map.touchZoomRotate.disableRotation();
 
+  // En fazla uzaklaşma: ülkenin tamamı görünür alana sığacak kadar; ekran/panel değişince yeniden hesaplanır
+  function updateMinZoom() {
+    const cam = map.cameraForBounds(geo.bounds, { padding: viewPadding() });
+    if (cam) map.setMinZoom(Math.max(3, cam.zoom - 0.6));
+  }
+  function goHome(animate = true) {
+    map.fitBounds(geo.bounds, { padding: viewPadding(), duration: animate ? 600 : 0 });
+  }
+  const empty = () => ({ type: "FeatureCollection", features: [] });
   function splitLine(coords) {
     const parts = [[]];
     coords.forEach((c, k) => {
@@ -94,46 +150,742 @@
   }
 
   map.on("load", () => {
-    for (const id of ["cells", "obs", "footprints", "sources", "pass-track", "sat-ahead", "selected"]) map.addSource(id, { type: "geojson", data: empty() });
-    map.addSource("turkey", { type: "geojson", data: "/turkey.geojson" });
-    map.addLayer({ id: "cells", type: "fill", source: "cells", paint: { "fill-color": "#000", "fill-opacity": 0.75 } });
-    map.addLayer({ id: "turkey", type: "line", source: "turkey", paint: { "line-color": "#d7dde5", "line-width": 1, "line-opacity": 0.6 } });
-    map.addLayer({ id: "sat-ahead", type: "line", source: "sat-ahead", paint: { "line-color": ["get", "color"], "line-width": 1, "line-opacity": 0.45, "line-dasharray": [2, 3] } });
-    map.addLayer({ id: "pass-track", type: "line", source: "pass-track", paint: { "line-color": ["get", "color"], "line-width": 3, "line-opacity": 0.9 } });
-    // EMIT bulut sınırı: sağlayıcının incelenmiş bulut kompleksi poligonu
-    map.addLayer({ id: "footprints", type: "line", source: "footprints", minzoom: 9, paint: { "line-color": "#9cc7ff", "line-width": 1.5 } });
-    map.addLayer({ id: "sources", type: "circle", source: "sources", paint: {
-      "circle-radius": 9, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#c79bf2", "circle-stroke-width": 2 } });
-    // Tespit noktası: sabit boyut; daire bulutun sınırı veya büyüklüğü değildir
-    map.addLayer({ id: "obs", type: "circle", source: "obs", paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 4, 10, 6],
-      "circle-color": ["case", ["get", "hasEmission"], "#ed7953", "#8b95a3"],
-      "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.5,
-      "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], PLUME_IMG_ZOOM, 1, PLUME_IMG_ZOOM + 3, 0.5] } });
+    for (const id of ["cells", "obs", "footprints", "sources", "pass-track", "sat-ahead", "selected"]) {
+      map.addSource(id, id === "obs"
+        ? { type: "geojson", data: empty(), cluster: true, clusterMaxZoom: CLUSTER_MAX_ZOOM, clusterRadius: 44 }
+        : { type: "geojson", data: empty() });
+    }
+    map.addSource("mask", { type: "geojson", data: geo.mask });
+    map.addSource("turkey", { type: "geojson", data: geo.outline });
+    // Sıra (alttan üste): temel harita, ülke dışına taşabilecek veri katmanları, yer adları, MASKE, sınır, Türkiye içi işaretçiler
+    map.addLayer({ id: "cells", type: "fill", source: "cells", layout: { visibility: "none" }, paint: { "fill-color": "#000", "fill-opacity": 0.45 } });
+    map.addLayer({ id: "footprints", type: "line", source: "footprints", minzoom: PLUME_IMG_ZOOM, paint: { "line-color": "#2f5f93", "line-width": 1.5 } });
+    map.addLayer({ id: "sat-ahead", type: "line", source: "sat-ahead", layout: { visibility: "none" }, paint: { "line-color": ["get", "color"], "line-width": 1.2, "line-dasharray": [2, 3] } });
+    map.addLayer({ id: "pass-track", type: "line", source: "pass-track", paint: { "line-color": ["get", "color"], "line-width": 3 } });
+    map.addLayer({ id: "labels-light", type: "raster", source: "labels-light" });
+    map.addLayer({ id: "labels-dark", type: "raster", source: "labels-dark", layout: { visibility: "none" } });
+    map.addLayer({ id: "mask", type: "fill", source: "mask", paint: { "fill-color": MASK_COLOR.light, "fill-opacity": 1 } });
+    map.addLayer({ id: "turkey", type: "line", source: "turkey", paint: { "line-color": "#7d8d9b", "line-width": 1.2 } });
+    map.addLayer({ id: "sources", type: "circle", source: "sources", layout: { visibility: "none" }, paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 6, 10, 9], "circle-color": "#ffffff",
+      "circle-stroke-color": "#6b4fa0", "circle-stroke-width": 3 } });
+    map.addLayer({ id: "obs-points", type: "circle", source: "obs", filter: ["!", ["has", "point_count"]], paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 5, 12, 7],
+      "circle-color": ["case", ["get", "hasEmission"], "#d95c36", "#8696a4"],
+      "circle-stroke-color": "#ffffff", "circle-stroke-width": 2, "circle-opacity": 1, "circle-stroke-opacity": 1 } });
     map.addLayer({ id: "selected", type: "circle", source: "selected", paint: {
-      "circle-radius": 11, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ffffff", "circle-stroke-width": 3 } });
-    map.moveLayer("labels", "sat-ahead");
+      "circle-radius": 12, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#172b3a", "circle-stroke-width": 3 } });
 
     map.on("click", "cells", (e) => {
-      if (map.queryRenderedFeatures(e.point, { layers: ["obs", "sources"] }).length) return;
+      if (map.queryRenderedFeatures(e.point, { layers: ["obs-points", "sources"] }).length) return;
+      if (!geo.contains(e.lngLat.lng, e.lngLat.lat)) return;
       const p = e.features[0].properties;
       const v = state.view === "anom" ? `${F.signed(p.v, 1)} ppb (referansa göre)` : `${fmtNum(p.v, 1)} ppb`;
       new maplibregl.Popup().setLngLat(e.lngLat).setHTML(`<div class="popup"><b>${esc(v)}</b><table>
         <tr><td>Mutlak</td><td>${fmtNum(p.abs, 1)} ppb</td></tr><tr><td>Piksel sayısı</td><td>${p.n}</td></tr>
         <tr><td>Hücre merkezi</td><td>${fmtNum(p.lat, 2)}° K, ${fmtNum(p.lon, 2)}° D</td></tr></table></div>`).addTo(map);
     });
-    map.on("click", "obs", (e) => openDetail(e.features[0].properties.id, { focus: true }));
-    map.on("click", "sources", (e) => openSource(e.features[0].properties.id));
-    for (const id of ["cells", "obs", "sources"]) {
+    map.on("click", "obs-points", (e) => openDetail(e.features[0].properties.id, { fly: false, push: true }));
+    map.on("click", "sources", (e) => openSource(e.features[0].properties.id, { push: true }));
+    for (const id of ["cells", "obs-points", "sources"]) {
       map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
     }
     map.on("moveend", () => { addPlumeImages(); writeUrl(); });
-    window.mapReady = true;
+    map.on("render", () => { if (map.isSourceLoaded("obs")) updateClusterMarkers(); });
+    mapReady = true;
+    updateMinZoom();
     init();
   });
 
-  // ---- TROPOMI ----------------------------------------------------------------------
+  // Panel veya pencere boyutu değişince harita ve kamera sınırları güncellenir
+  let resizeTimer;
+  new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { map.resize(); if (mapReady) updateMinZoom(); }, 80);
+  }).observe($("app"));
+
+  // ---- Kümeler: gerçek kayıt sayısıyla HTML işaretçi (dış yazı tipi sunucusu gerekmez) -------
+  const clusterMarkers = new Map();
+  function updateClusterMarkers() {
+    const visible = new Set();
+    if (state.tab === "obs" && $("show-plumes").checked) {
+      for (const f of map.querySourceFeatures("obs")) {
+        const p = f.properties;
+        if (!p.cluster) continue;
+        const id = p.cluster_id;
+        if (visible.has(id)) continue;
+        visible.add(id);
+        let m = clusterMarkers.get(id);
+        if (!m) {
+          const el = document.createElement("button");
+          el.type = "button";
+          const n = p.point_count;
+          const size = n < 10 ? 34 : n < 50 ? 40 : 48;
+          el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;border:3px solid #fff;background:#172b3a;color:#fff;font:600 13px/1 'Segoe UI',system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 6px rgba(23,43,58,.35)`;
+          el.textContent = n;
+          el.setAttribute("aria-label", `${n} gözlem; yakınlaştır`);
+          el.addEventListener("click", async (ev) => {
+            ev.stopPropagation();
+            const z = await map.getSource("obs").getClusterExpansionZoom(id);
+            map.easeTo({ center: f.geometry.coordinates, zoom: Math.min(z + 0.2, 14) });
+          });
+          m = new maplibregl.Marker({ element: el }).setLngLat(f.geometry.coordinates);
+          clusterMarkers.set(id, m);
+        }
+        if (!m._map) m.addTo(map);
+      }
+    }
+    for (const [id, m] of clusterMarkers) if (!visible.has(id)) { m.remove(); clusterMarkers.delete(id); }
+  }
+
+  // ---- Temel harita ---------------------------------------------------------------------
+  function setBase(name) {
+    state.base = name === "dark" ? "dark" : "light";
+    for (const b of ["light", "dark"]) {
+      const v = b === state.base ? "visible" : "none";
+      map.setLayoutProperty(`base-${b}`, "visibility", v);
+      map.setLayoutProperty(`labels-${b}`, "visibility", v);
+    }
+    // Maske her temel haritada aynı katmandır; yalnızca rengi temaya uyar
+    map.setPaintProperty("mask", "fill-color", MASK_COLOR[state.base]);
+    [...$("basemap").children].forEach((b) => { const on = b.dataset.base === state.base; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+    document.body.style.setProperty("--mask", MASK_COLOR[state.base]);
+    writeUrl();
+  }
+  $("basemap").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setBase(b.dataset.base); });
+
+  // ---- Panel yönetimi (tek seferde bir açılır panel; Escape ile kapanır, odak geri döner) ---
+  const popovers = { filters: "filters-btn", "info-pop": "info-btn", layers: "layers-btn", "status-panel": "status-btn" };
+  const openerOf = {};
+  function openPopover(id) {
+    for (const other of Object.keys(popovers)) if (other !== id) closePopover(other, false);
+    $(id).hidden = false;
+    $(popovers[id]).setAttribute("aria-expanded", "true");
+    openerOf[id] = $(popovers[id]);
+    const focusable = $(id).querySelector("select, input, button:not([data-close]), a");
+    (focusable || $(id).querySelector("[data-close]"))?.focus();
+  }
+  function closePopover(id, restore = true) {
+    if ($(id).hidden) return;
+    $(id).hidden = true;
+    $(popovers[id]).setAttribute("aria-expanded", "false");
+    if (restore) openerOf[id]?.focus();
+  }
+  for (const [id, btn] of Object.entries(popovers)) {
+    $(btn).addEventListener("click", () => ($(id).hidden ? openPopover(id) : closePopover(id)));
+  }
+  document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => closePopover(b.dataset.close)));
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (document.querySelector(".mobile-menu[open]")) return;
+    if (!$("q-results").hidden) { hideSearch(); return; }
+    const open = Object.keys(popovers).find((id) => !$(id).hidden);
+    if (open) { closePopover(open); return; }
+    if (!$("detail").hidden) closeDetail({ push: true });
+  });
+
+  // ---- Filtreler --------------------------------------------------------------------------
+  function fillSelect(id, values, current) {
+    const sel = $(id);
+    sel.length = 1;
+    for (const [v, label] of values) sel.add(new Option(label, v));
+    sel.value = values.some(([v]) => v === current) ? current : "";
+  }
+  function formToState() {
+    state.filters = { sector: $("f-sector").value, sensor: $("f-sensor").value, days: $("f-period").value, em: $("f-emission").checked };
+  }
+  function stateToForm() {
+    $("f-sector").value = state.filters.sector;
+    $("f-sensor").value = state.filters.sensor;
+    $("f-period").value = state.filters.days;
+    $("f-emission").checked = state.filters.em;
+    $("f-sort").value = state.sort;
+  }
+  const PERIOD = { 30: "Son 30 gün", 90: "Son 90 gün", 365: "Son 1 yıl" };
+  function renderChips() {
+    const f = state.filters;
+    const chips = [];
+    if (f.sector) chips.push(["sector", sectorName(f.sector)]);
+    if (f.sensor) chips.push(["sensor", f.sensor]);
+    if (f.days) chips.push(["days", PERIOD[f.days] || `Son ${f.days} gün`]);
+    if (f.em) chips.push(["em", "Emisyon tahmini olanlar"]);
+    $("chips").innerHTML = chips.map(([k, l]) => `<span class="chip">${esc(l)}<button type="button" data-chip="${k}" aria-label="${esc(l)} filtresini kaldır">×</button></span>`).join("");
+    $("f-count").hidden = !chips.length;
+    $("f-count").textContent = chips.length || "";
+  }
+  $("chips").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-chip]");
+    if (!b) return;
+    const k = b.dataset.chip;
+    state.filters[k] = k === "em" ? false : "";
+    stateToForm();
+    applyFilters();
+  });
+  $("f-apply").onclick = () => { formToState(); closePopover("filters"); applyFilters(); };
+  $("f-clear").onclick = () => { state.filters = { sector: "", sensor: "", days: "", em: false }; stateToForm(); applyFilters(); };
+  $("f-sort").onchange = () => { state.sort = $("f-sort").value; loadObservations(); };
+  function applyFilters() { renderChips(); loadObservations(); }
+
+  // ---- Gözlemler ve kaynak özetleri --------------------------------------------------------
+  const emissionText = (e) => (e && F.num(e.value)
+    ? `${fmtNum(e.value)} kg CH₄/sa` + (e.uncertainty && F.num(e.uncertainty.value) ? ` ± ${fmtNum(e.uncertainty.value)}` : "")
+    : "Tahmin yok");
+  function query() {
+    const q = new URLSearchParams({ limit: "2000", scope: "tr", sort: state.sort });
+    const f = state.filters;
+    if (f.sector) q.set("sector", f.sector);
+    if (f.sensor) q.set("sensor", f.sensor);
+    if (f.days) q.set("days", f.days);
+    if (f.em) q.set("emission_only", "true");
+    return q;
+  }
+  const obsReq = latestOnly();
+  async function loadObservations() {
+    const req = obsReq();
+    $("cards").setAttribute("aria-busy", "true");
+    if (state.tab === "obs") $("cards").innerHTML = '<div class="skeleton"></div>'.repeat(5);
+    try {
+      const r = await getJSON(`/api/observations?${query()}`, { signal: req.signal });
+      if (!req.current()) return;
+      state.items = r.items;
+      state.total = r.total;
+      state.shown = PAGE;
+      if (!state.facets) {
+        state.facets = r.facets;
+        fillSelect("f-sector", r.facets.sectors.map((s) => [s, sectorName(s)]).sort((a, b) => a[1].localeCompare(b[1], "tr")), state.filters.sector);
+        fillSelect("f-sensor", r.facets.sensors.map((s) => [s, s]), state.filters.sensor);
+      }
+      renderObservationsLayer();
+      renderResults();
+    } catch (e) {
+      if (e.aborted) return;
+      $("cards").innerHTML = `<div class="empty">Gözlemler alınamadı: ${esc(e.message)}.<br><button class="btn-secondary" type="button" id="retry">Yeniden dene</button></div>`;
+      $("retry").onclick = loadObservations;
+    } finally {
+      $("cards").setAttribute("aria-busy", "false");
+    }
+    writeUrl();
+  }
+  async function loadSources() {
+    try {
+      const r = await getJSON("/api/source-summaries?scope=tr");
+      state.sources = r.items;
+      map.getSource("sources").setData({ type: "FeatureCollection", features: r.items.map((s) => ({
+        type: "Feature", geometry: { type: "Point", coordinates: [s.lon, s.lat] }, properties: { id: s.id } })) });
+    } catch (e) { state.sources = []; }
+    if (state.tab === "src") renderResults();
+    $("tab-src-n").textContent = `(${visibleSources().length})`;
+  }
+  const visibleSources = () => state.sources.filter((s) => !state.filters.sector || s.sectorCode === state.filters.sector);
+  async function loadAllForSearch() {
+    try { state.all = (await getJSON("/api/observations?limit=2000&scope=tr")).items; } catch (e) { state.all = []; }
+  }
+
+  function renderObservationsLayer() {
+    const on = $("show-plumes").checked && state.tab === "obs";
+    map.getSource("obs").setData({ type: "FeatureCollection", features: state.items.map((o) => ({
+      type: "Feature", geometry: o.geometry, properties: { id: o.id, hasEmission: !!o.emission } })) });
+    map.getSource("footprints").setData({ type: "FeatureCollection", features: state.items.filter((o) => o.footprint).map((o) => ({
+      type: "Feature", geometry: o.footprint, properties: { id: o.id } })) });
+    for (const id of ["obs-points", "footprints"]) map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
+    map.setLayoutProperty("sources", "visibility", state.tab === "src" ? "visible" : "none");
+    $("legend-obs").hidden = state.tab !== "obs" || !$("show-plumes").checked;
+    $("legend-src").hidden = state.tab !== "src";
+    highlightSelection();
+    syncPlumeImages();
+    updateClusterMarkers();
+  }
+
+  function thumbHtml(t, alt) {
+    return t?.url
+      ? `<span class="thumb"><img src="${esc(t.url)}" alt="${esc(alt)}" loading="lazy" decoding="async" title="${esc(t.kind)}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'noimg',textContent:'Görüntü yüklenemedi'}))"></span>`
+      : `<span class="thumb"><span class="noimg">Görüntü yok</span></span>`;
+  }
+  function obsCard(o) {
+    const when = o.observedAt ? fmtShort(o.observedAt) : "Gözlem zamanı doğrulanmadı";
+    const num = o.emission && F.num(o.emission.value)
+      ? `<b>${fmtNum(o.emission.value)}</b><span>kg CH₄/sa${o.emission.uncertainty && F.num(o.emission.uncertainty.value) ? ` ± ${fmtNum(o.emission.uncertainty.value)}` : ""}</span>`
+      : `<span class="none">Emisyon tahmini yok</span>`;
+    return `<button class="card${state.selected === o.id ? " sel" : ""}" type="button" role="listitem" data-id="${esc(o.id)}">
+      ${thumbHtml(o.thumbnail, `${o.thumbnail?.kind || "Görüntü"} · ${o.locationLabel}`)}
+      <span class="card-body"><span class="c-title">${esc(o.locationLabel)}</span>
+        <span class="c-meta">${esc(when)} · ${esc(o.sensor ?? "Sensör belirtilmemiş")}</span>
+        <span class="c-meta">${esc(o.provider)}${o.accessPaths.length > 1 ? " · 2 erişim yolu" : ""}</span>
+        <span class="c-num">${num}</span>
+        <span class="tag">${esc(sectorName(o.sectorCode))}</span></span></button>`;
+  }
+  function sourceCard(s) {
+    const m = s.detectedMean;
+    const num = m ? `<b>${fmtNum(m.value)}</b><span>kg CH₄/sa · tespitlerin ortalaması</span>` : `<span class="none">Ortalama yayımlanmamış</span>`;
+    return `<button class="card${state.selectedSource === s.id ? " sel" : ""}" type="button" role="listitem" data-src="${esc(s.id)}">
+      ${thumbHtml(s.thumbnail, `Kaynağın en son gözlem görüntüsü · ${s.locationLabel}`)}
+      <span class="card-body"><span class="c-title">${esc(s.locationLabel)}</span>
+        <span class="c-meta">Dönem: ${esc(s.firstObserved || "?")} – ${esc(s.lastObserved || "?")}</span>
+        <span class="c-meta">${fmtNum(s.linkedObservations)} bağlı gözlem · ${fmtNum(s.detectionDateCount)} / ${fmtNum(s.observationDateCount)} tespit/gözlem tarihi</span>
+        <span class="c-num">${num}</span>
+        <span class="tag brand">Kaynak özeti</span> <span class="tag">${esc(sectorName(s.sectorCode))}</span></span></button>`;
+  }
+
+  function renderResults() {
+    const obs = state.tab === "obs";
+    const list = obs ? state.items : visibleSources();
+    $("tab-obs-n").textContent = `(${state.items.length})`;
+    $("tab-src-n").textContent = `(${visibleSources().length})`;
+    $("r-count").textContent = fmtNum(list.length);
+    $("r-noun").textContent = obs ? "gözlem" : "kaynak özeti";
+    $("fab-count").textContent = `(${state.items.length})`;
+    $("f-sort").disabled = !obs;
+    const rng = state.facets?.observedRange;
+    const span = rng ? `${new Date(rng[0]).getUTCFullYear()}–${new Date(rng[1]).getUTCFullYear()}` : "–";
+    $("r-range").textContent = obs
+      ? (state.filters.days ? `Bulut gözlemleri: son ${state.filters.days} gün (gözlem zamanına göre)` : `Bulut gözlemleri: tüm dönem (${span}) · ${state.total} kayıttan`)
+      : "Sağlayıcının bulutları kümeleyerek oluşturduğu özetler; tek bulut değildir.";
+    if (!list.length) {
+      const any = Object.values(state.filters).some(Boolean);
+      $("cards").innerHTML = `<div class="empty">Bu seçimle kayıt yok. Bu, metan olmadığı anlamına gelmez.${any ? '<br><button class="btn-secondary" type="button" id="clear-empty">Filtreleri temizle</button>' : ""}</div>`;
+      $("clear-empty")?.addEventListener("click", () => $("f-clear").click());
+      return;
+    }
+    const shown = list.slice(0, state.shown);
+    $("cards").innerHTML = shown.map(obs ? obsCard : sourceCard).join("")
+      + (list.length > state.shown ? `<button class="btn-secondary more" type="button" id="more">Daha fazla göster (${list.length - state.shown})</button>` : "");
+    $("more")?.addEventListener("click", () => { state.shown += PAGE; renderResults(); });
+  }
+
+  $("cards").addEventListener("click", (e) => {
+    const c = e.target.closest(".card");
+    if (!c) return;
+    state.scroll = $("cards").scrollTop;
+    if (c.dataset.id) openDetail(c.dataset.id, { fly: true, push: true, opener: c });
+    else if (c.dataset.src) openSource(c.dataset.src, { fly: true, push: true, opener: c });
+  });
+
+  function setTab(tab) {
+    state.tab = tab;
+    $("tab-obs").setAttribute("aria-selected", String(tab === "obs"));
+    $("tab-src").setAttribute("aria-selected", String(tab === "src"));
+    $("tab-obs").tabIndex = tab === "obs" ? 0 : -1;
+    $("tab-src").tabIndex = tab === "src" ? 0 : -1;
+    state.shown = PAGE;
+    renderObservationsLayer();
+    renderResults();
+    writeUrl();
+  }
+  $("tab-obs").onclick = () => setTab("obs");
+  $("tab-src").onclick = () => setTab("src");
+  document.querySelector(".results .tabs").addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") { setTab(state.tab === "obs" ? "src" : "obs"); $(state.tab === "obs" ? "tab-obs" : "tab-src").focus(); }
+  });
+
+  // CSV: listede ve haritada görünen kümenin aynısı (Türkiye kapsamı)
+  $("download").onclick = () => {
+    const cell = (v) => (v == null ? "" : /[",\n;]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+    let cols, rows;
+    if (state.tab === "obs") {
+      cols = ["id", "provider", "sensor", "observedAt", "publishedAt", "ingestedAt", "lat", "lon", "sectorCode",
+        "emission_kg_h", "uncertainty_kg_h", "processingVersion", "sourceId", "accessPaths", "sourceUrl"];
+      rows = state.items.map((o) => [o.id, o.provider, o.sensor, o.observedAt, o.publishedAt, o.ingestedAt, o.lat, o.lon,
+        o.sectorCode, o.emission?.value, o.emission?.uncertainty?.value, o.processingVersion, o.sourceId,
+        o.accessPaths.map((a) => `${a.provider}:${a.id}`).join(" | "), o.sourceUrl]);
+    } else {
+      cols = ["id", "lat", "lon", "sectorCode", "firstObserved", "lastObserved", "linkedObservations", "detectionDateCount",
+        "observationDateCount", "detectedMean_kg_h", "persistenceWeighted_kg_h", "sourceUrl"];
+      rows = visibleSources().map((s) => [s.providerId, s.lat, s.lon, s.sectorCode, s.firstObserved, s.lastObserved, s.linkedObservations,
+        s.detectionDateCount, s.observationDateCount, s.detectedMean?.value, s.persistenceWeighted?.value, s.sourceUrl]);
+    }
+    const blob = new Blob(["﻿" + [cols.join(","), ...rows.map((r) => r.map(cell).join(","))].join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `metan-${state.tab === "obs" ? "gozlemleri" : "kaynak-ozetleri"}-turkiye-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  // Sağlayıcı bulut görüntüleri yalnızca yakınlaştırınca ve görünen alandakiler için yüklenir (maskenin altında)
+  const plumeImages = new Set();
+  function syncPlumeImages() {
+    const on = $("show-plumes").checked && state.tab === "obs";
+    const visible = new Set(state.items.map((o) => o.id));
+    plumeImages.forEach((id) => map.setLayoutProperty(`img-${id}`, "visibility", on && visible.has(id) ? "visible" : "none"));
+    addPlumeImages();
+  }
+  function addPlumeImages() {
+    if (!$("show-plumes").checked || state.tab !== "obs" || map.getZoom() < PLUME_IMG_ZOOM) return;
+    const v = map.getBounds();
+    for (const o of state.items) {
+      const b = o.raster?.bounds;
+      if (!o.raster?.png || !b || plumeImages.has(o.id)) continue;
+      if (b[2] < v.getWest() || b[0] > v.getEast() || b[3] < v.getSouth() || b[1] > v.getNorth()) continue;
+      const id = `img-${o.id}`;
+      map.addSource(id, { type: "image", url: o.raster.png, coordinates: [[b[0], b[3]], [b[2], b[3]], [b[2], b[1]], [b[0], b[1]]] });
+      map.addLayer({ id, type: "raster", source: id, minzoom: PLUME_IMG_ZOOM, paint: { "raster-fade-duration": 0 } }, "footprints");
+      plumeImages.add(o.id);
+    }
+  }
+  $("show-plumes").onchange = () => { renderObservationsLayer(); writeUrl(); };
+
+  function highlightSelection() {
+    const sel = state.selected;
+    const op = sel ? ["case", ["==", ["get", "id"], sel], 1, 0.35] : 1;
+    map.setPaintProperty("obs-points", "circle-opacity", op);
+    map.setPaintProperty("obs-points", "circle-stroke-opacity", op);
+  }
+
+  // ---- Arama: katalog kayıtları ve koordinat (yer adı araması yok) ---------------------------
+  let searchHits = [], searchIdx = -1;
+  function parseCoord(s) {
+    const m = s.trim().replace(/°/g, "").match(/^(-?\d{1,2}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)$/);
+    if (!m) return null;
+    const a = Number(m[1]), b = Number(m[2]);
+    return Number.isFinite(a) && Number.isFinite(b) ? { lat: a, lon: b } : null;
+  }
+  const norm = (s) => String(s || "").toLocaleLowerCase("tr").replace(/[,°]/g, ".");
+  function runSearch() {
+    const q = $("q").value.trim();
+    const box = $("q-results");
+    searchHits = []; searchIdx = -1;
+    if (q.length < 2) { hideSearch(); return; }
+    const html = [];
+    // Koordinat girişi "41,21 28,15" ya da "41.21, 28.15" (enlem, boylam)
+    const c = parseCoord(q.replace(/(\d),(\d)/g, "$1.$2"));
+    if (c) {
+      if (geo.contains(c.lon, c.lat)) {
+        searchHits.push({ kind: "coord", ...c });
+        html.push(`<div class="q-group">Koordinat</div><button class="q-opt" role="option" data-k="0" type="button">${fmtNum(c.lat, 4)}° K, ${fmtNum(c.lon, 4)}° D<small>Bu noktaya git</small></button>`);
+      } else {
+        html.push('<div class="q-msg">Bu koordinat Türkiye dışında. Türkiye içinden bir konum seçin.</div>');
+      }
+    }
+    const nq = norm(q);
+    const obs = state.all.filter((o) => [o.id, o.providerId, o.locationLabel, o.sensor].some((v) => norm(v).includes(nq))).slice(0, 6);
+    if (obs.length) {
+      html.push('<div class="q-group">Gözlem kayıtları</div>');
+      for (const o of obs) {
+        searchHits.push({ kind: "obs", id: o.id });
+        html.push(`<button class="q-opt" role="option" data-k="${searchHits.length - 1}" type="button">${esc(o.locationLabel)} · ${esc(fmtShort(o.observedAt) || "")}<small>${esc(o.sensor || "")} · ${esc(o.providerId || o.id)}</small></button>`);
+      }
+    }
+    const srcs = state.sources.filter((s) => [s.providerId, s.locationLabel, sectorName(s.sectorCode)].some((v) => norm(v).includes(nq))).slice(0, 4);
+    if (srcs.length) {
+      html.push('<div class="q-group">Kaynak özetleri</div>');
+      for (const s of srcs) {
+        searchHits.push({ kind: "src", id: s.id });
+        html.push(`<button class="q-opt" role="option" data-k="${searchHits.length - 1}" type="button">${esc(s.locationLabel)}<small>${esc(sectorName(s.sectorCode))} · ${esc(s.providerId)}</small></button>`);
+      }
+    }
+    if (!html.length) html.push('<div class="q-msg">Sonuç yok. Yer adı araması bulunmuyor; kayıt kimliği, sensör, kaynak veya koordinat (ör. 41,21 28,15) deneyin.</div>');
+    box.innerHTML = html.join("");
+    box.hidden = false;
+    $("q").setAttribute("aria-expanded", "true");
+  }
+  function hideSearch() { $("q-results").hidden = true; $("q").setAttribute("aria-expanded", "false"); searchIdx = -1; }
+  function pickSearch(k) {
+    const h = searchHits[k];
+    if (!h) return;
+    hideSearch();
+    if (h.kind === "coord") {
+      map.flyTo({ center: [h.lon, h.lat], zoom: Math.max(map.getZoom(), 10) });
+      new maplibregl.Popup().setLngLat([h.lon, h.lat]).setHTML(`<div class="popup"><b>Seçilen nokta</b><br>${fmtNum(h.lat, 4)}° K, ${fmtNum(h.lon, 4)}° D<br><a href="/hava-ve-iklim.html?lat=${h.lat.toFixed(4)}&lon=${h.lon.toFixed(4)}">Bu noktanın hava ve iklimi</a></div>`).addTo(map);
+    } else if (h.kind === "obs") openDetail(h.id, { fly: true, push: true });
+    else openSource(h.id, { fly: true, push: true });
+  }
+  $("q").addEventListener("input", runSearch);
+  $("q").addEventListener("focus", () => { if ($("q").value.trim().length >= 2) runSearch(); });
+  $("q").addEventListener("keydown", (e) => {
+    const opts = [...$("q-results").querySelectorAll(".q-opt")];
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (!opts.length) return;
+      e.preventDefault();
+      searchIdx = (searchIdx + (e.key === "ArrowDown" ? 1 : -1) + opts.length) % opts.length;
+      opts.forEach((o, i) => o.setAttribute("aria-selected", String(i === searchIdx)));
+      opts[searchIdx].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (opts.length) pickSearch(searchIdx >= 0 ? Number(opts[searchIdx].dataset.k) : 0);
+    }
+  });
+  $("q-results").addEventListener("click", (e) => { const b = e.target.closest(".q-opt"); if (b) pickSearch(Number(b.dataset.k)); });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) hideSearch(); });
+
+  // ---- Sonuçlar paneli / alt panel --------------------------------------------------------
+  function setResultsOpen(open) {
+    state.resultsOpen = open;
+    $("results").hidden = !open || !$("detail").hidden;
+    $("results-open").hidden = open || !$("detail").hidden;
+    writeUrl();
+  }
+  $("results-close").onclick = () => { setResultsOpen(false); $("results-open").focus(); };
+  $("results-open").onclick = () => { setResultsOpen(true); $("results-close").focus(); };
+  const SHEETS = ["peek", "half", "full"];
+  const setSheet = (s) => { $("app").dataset.sheet = s; };
+  $("sheet-up").onclick = (e) => { e.stopPropagation(); setSheet(SHEETS[Math.min(2, SHEETS.indexOf($("app").dataset.sheet) + 1)]); };
+  $("sheet-down").onclick = (e) => { e.stopPropagation(); setSheet(SHEETS[Math.max(0, SHEETS.indexOf($("app").dataset.sheet) - 1)]); };
+  document.querySelector(".results-head").addEventListener("click", (e) => {
+    if (!MOBILE() || e.target.closest("button, select, label")) return;
+    setSheet($("app").dataset.sheet === "peek" ? "half" : "peek");
+  });
+
+  // ---- Ayrıntı ---------------------------------------------------------------------------
+  const detailReq = latestOnly();
+  let detailOpener = null;
+  function showDetail() {
+    $("detail").hidden = false;
+    $("results").hidden = true;
+    $("results-open").hidden = true;
+    $("detail-body").scrollTop = 0;
+  }
+  function closeDetail({ push = false } = {}) {
+    if ($("detail").hidden) return;
+    detailReq();
+    $("detail").hidden = true;
+    state.selected = null;
+    state.selectedSource = null;
+    map.getSource("selected").setData(empty());
+    highlightSelection();
+    setResultsOpen(state.resultsOpen || MOBILE());
+    renderResults();
+    $("cards").scrollTop = state.scroll;
+    writeUrl(push);
+    const ds = detailOpener?.dataset || {};
+    const back = (ds.id && document.querySelector(`.card[data-id="${CSS.escape(ds.id)}"]`)) || (ds.src && document.querySelector(`.card[data-src="${CSS.escape(ds.src)}"]`));
+    (back || ($("results").hidden ? $("results-open") : $("cards")))?.focus?.();
+  }
+  $("detail-close").onclick = () => closeDetail({ push: true });
+  $("detail-back").onclick = () => closeDetail({ push: true });
+
+  const kv = (rows) => `<dl class="kv">${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl>`;
+  const timeCell = (iso) => (iso ? `${esc(fmtLocal(iso))}<small>${esc(fmtUtc(iso))}</small>` : F.notProvided);
+  const uncertaintyText = (e) => {
+    const u = e?.uncertainty;
+    if (u && F.num(u.lower) && F.num(u.upper)) return `${fmtNum(u.lower)}–${fmtNum(u.upper)} kg CH₄/sa · ${esc(u.label || "istatistiksel tanımı kayıtta belirtilmemiş")}`;
+    if (u && F.num(u.value)) return `± ${fmtNum(u.value)} kg CH₄/sa · ${esc(u.label || "sağlayıcının simetrik belirsizliği; istatistiksel tanımı kayıtta belirtilmemiş")}`;
+    return "Sağlayıcı belirsizlik vermemiş";
+  };
+  function flyTo(lon, lat) {
+    if (!geo.contains(lon, lat)) return;
+    map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), PLUME_IMG_ZOOM + 1), padding: viewPadding() });
+  }
+  const miniCard = (x) => `<button class="card" type="button" data-open="${esc(x.id)}">${thumbHtml(x.thumbnail, x.thumbnail?.kind || "Görüntü")}<span class="card-body"><span class="c-title">${esc(fmtShort(x.observedAt) || "zaman yok")}</span><span class="c-meta">${esc(x.sensor ?? "")}</span><span class="c-num">${x.emission ? `<b>${fmtNum(x.emission.value)}</b><span>kg CH₄/sa</span>` : '<span class="none">Tahmin yok</span>'}</span></span></button>`;
+
+  async function openDetail(id, { fly = false, push = false, opener = null } = {}) {
+    const req = detailReq();
+    state.selected = id;
+    state.selectedSource = null;
+    detailOpener = opener || document.activeElement;
+    for (const k of Object.keys(popovers)) closePopover(k, false);
+    showDetail();
+    $("detail-body").innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+    let r;
+    try { r = await getJSON(`/api/observations/${encodeURIComponent(id)}`, { signal: req.signal }); }
+    catch (e) {
+      if (!e.aborted && req.current()) $("detail-body").innerHTML = `<div class="empty">Gözlem açılamadı: ${esc(e.message)}</div>`;
+      return;
+    }
+    if (!req.current()) return;
+    const o = r.observation;
+    const [lon, lat] = o.geometry.coordinates;
+    map.getSource("selected").setData({ type: "FeatureCollection", features: [{ type: "Feature", geometry: o.geometry, properties: {} }] });
+    highlightSelection();
+    if (fly) flyTo(lon, lat);
+    $("detail-body").innerHTML = detailHtml(o, r.sourceSummary, r.relatedObservations);
+    $("d-title").focus({ preventScroll: true });
+    writeUrl(push);
+    bindDetailTabs();
+    loadWeather(o, req);
+    loadSurface(o, req);
+  }
+
+  function detailHtml(o, src, related) {
+    const e = o.emission;
+    const img = o.thumbnail?.url
+      ? `<figure class="d-img"><img src="${esc(o.thumbnail.url)}" alt="${esc(o.thumbnail.kind)}" loading="lazy"><figcaption>${esc(o.thumbnail.kind)}. Renk ölçeğinin sayısal lejantı sağlayıcı yanıtında yok.${o.raster ? " Haritada yakınlaştırınca aynı ürünün artış görüntüsü konumunda açılır." : ""}</figcaption></figure>`
+      : `<div class="status-box d-img">Bu kayıtta yayımlanmış görüntü yok. Haritadaki işaret yalnızca tespit noktasıdır.</div>`;
+    const alt = (o.alternateEstimates || []).map((a) => `<li>${esc(a.provider)} (${esc(a.id)}): ${a.emission ? esc(emissionText(a.emission)) : "emisyon tahmini yayımlanmamış"}${a.maxEnhancement?.value != null ? ` · en yüksek artış ${fmtNum(a.maxEnhancement.value)} ${esc(a.maxEnhancement.unit)}` : ""}</li>`).join("");
+    const access = o.accessPaths.map((a) => `<a class="btn-secondary small" href="${esc(a.url)}" target="_blank" rel="noopener">Özgün kaydı aç · ${esc(a.provider)} ↗</a>`).join("");
+    const attribution = src
+      ? `Sağlayıcı bu bulutu ${esc(String(src.clusterRadiusM ?? "?"))} m kümeleme yarıçaplı bir kaynak kaydına bağlıyor. Tesis doğrulaması değildir.`
+      : "Sağlayıcı kaynak kümelemesi veya doğrulanmış tesis eşleştirmesi yok.";
+    const rel = related.length ? `<div class="related">${related.map(miniCard).join("")}</div>` : '<p class="note">Bu kayda bağlı başka gözlem yok.</p>';
+    return `
+      <h2 class="d-place" id="d-title" tabindex="-1">${esc(o.locationLabel)}</h2>
+      <p class="d-sub">${esc(fmtLocal(o.observedAt) || "Gözlem zamanı doğrulanmadı")} · ${esc(o.sensor ?? "Sensör belirtilmemiş")}<br>${esc(o.provider)}</p>
+      ${e && F.num(e.value) ? `<p class="d-num"><b>${fmtNum(e.value)}</b><span>kg CH₄/saat · bu gözlemin emisyon tahmini</span></p><p class="d-unc">${uncertaintyText(e)}</p>`
+        : '<div class="status-box" style="margin-top:12px">Sağlayıcı bu gözlem için emisyon tahmini yayımlamadı. Bu, sıfır emisyon anlamına gelmez.</div>'}
+      ${img}
+      <div class="tabs d-tabs" role="tablist" aria-label="Gözlem ayrıntısı">
+        <button role="tab" id="dt-obs" aria-selected="true" aria-controls="dp-obs">Gözlem</button>
+        <button role="tab" id="dt-wx" aria-selected="false" aria-controls="dp-wx" tabindex="-1">Meteoroloji</button>
+        <button role="tab" id="dt-hist" aria-selected="false" aria-controls="dp-hist" tabindex="-1">Geçmiş</button>
+      </div>
+      <div role="tabpanel" id="dp-obs" aria-labelledby="dt-obs">
+        <section class="dsec"><h3>Zaman</h3>${kv([["Gözlem", timeCell(o.observedAt)], ["Yayımlanma", timeCell(o.publishedAt)], ["Sisteme alınma", timeCell(o.ingestedAt)]])}
+          <p class="note">Gözlem yılı sağlayıcının tarih alanından alınır; kayıt kimliğinden türetilmez.</p></section>
+        <section class="dsec"><h3>Kayıt ve yöntem</h3>${kv([
+          ["Özgün kimlik", esc(o.providerId || o.id)],
+          ["Sensör / platform", `${esc(o.sensor ?? "–")}${o.platform ? ` <small>${esc(o.platform)}</small>` : ""}`],
+          ["Sektör", esc(sectorName(o.sectorCode))],
+          ["İşlem sürümü", esc(o.processingVersion || F.notProvided)],
+          o.gsdM ? ["Yer örneklemesi", `${fmtNum(o.gsdM)} m`] : null,
+          ["Kalite", esc(o.qualityNote || "Sağlayıcı kalite alanı boş")],
+          ["Kaynak eşleştirmesi", esc(attribution)],
+        ])}
+        ${alt ? `<p class="note">Aynı gözlemin diğer erişim yolundaki tahmin (bağımsız doğrulama değildir):</p><ul class="note">${alt}</ul>` : ""}</section>
+        <section class="dsec" id="d-surface"><h3>Yüzey görüntüsü</h3><div class="status-box">Yükleniyor…</div></section>
+        <section class="dsec"><h3>Bu ölçümü anlamak</h3>${understandHtml()}</section>
+      </div>
+      <div role="tabpanel" id="dp-wx" aria-labelledby="dt-wx" hidden>
+        <section class="dsec" id="d-weather"><div class="status-box">Yükleniyor…</div></section>
+      </div>
+      <div role="tabpanel" id="dp-hist" aria-labelledby="dt-hist" hidden>
+        ${src ? sourceBlock(src) : '<p class="note">Bu gözlem bir kaynak özetine bağlı değil.</p>'}
+        <section class="dsec"><h3>Aynı kaynağın diğer kayıtları</h3>${rel}</section>
+      </div>
+      <div class="actions">${access}
+        <a class="btn-secondary small" href="/hava-ve-iklim.html?obs=${encodeURIComponent(o.id)}">Hava ve İklim'de aç</a></div>`;
+  }
+  function sourceBlock(src) {
+    const dm = src.detectedMean, pw = src.persistenceWeighted;
+    return `<section class="dsec"><h3>Kaynak özeti (sağlayıcı) — tek bulut değildir</h3>${kv([
+      ["Kaynak kaydı", esc(src.providerId)],
+      ["Dönem", `${esc(src.firstObserved || "?")} – ${esc(src.lastObserved || "?")}`],
+      ["Gözlem / tespit tarihi", `${fmtNum(src.observationDateCount)} / ${fmtNum(src.detectionDateCount)} <small>Sağlayıcının saydığı uygun gözlem ve tespit tarihleri</small>`],
+      ["Tespitlerin ortalaması", dm ? `${fmtNum(dm.value)} kg/sa${dm.uncertainty ? ` ± ${fmtNum(dm.uncertainty.value)}` : ""}` : F.notProvided],
+      ["Süreklilikle ağırlıklı ortalama", pw ? `${fmtNum(pw.value)} kg/sa <small>Sağlayıcı alanı: tespit ortalaması × (tespit tarihi / gözlem tarihi)</small>` : F.notProvided],
+    ])}<p class="note">Kaynak ortalaması bir dönemi özetler; tek bir buluta atanmaz.</p></section>`;
+  }
+  function understandHtml() {
+    const g = state.content?.glossary;
+    const pick = g ? ["emisyon", "belirsizlik", "gecikme", "ruzgar"].map((id) => g.find((x) => x.id === id)).filter(Boolean) : [];
+    return pick.map((x) => `<p class="note"><b>${esc(x.title)}.</b> ${esc(x.text)}</p>`).join("")
+      + '<p class="note"><a href="/yuksek-degerleri-yorumlamak.html">Yüksek değerleri yorumlama rehberi</a></p>';
+  }
+  function bindDetailTabs() {
+    const tabs = ["obs", "wx", "hist"];
+    const set = (t, focus) => {
+      for (const k of tabs) {
+        const on = k === t;
+        $(`dt-${k}`).setAttribute("aria-selected", String(on));
+        $(`dt-${k}`).tabIndex = on ? 0 : -1;
+        $(`dp-${k}`).hidden = !on;
+      }
+      if (focus) $(`dt-${t}`).focus();
+    };
+    for (const k of tabs) $(`dt-${k}`).onclick = () => set(k);
+    document.querySelector(".d-tabs").addEventListener("keydown", (e) => {
+      const i = tabs.findIndex((k) => $(`dt-${k}`).getAttribute("aria-selected") === "true");
+      if (e.key === "ArrowRight") set(tabs[(i + 1) % 3], true);
+      if (e.key === "ArrowLeft") set(tabs[(i + 2) % 3], true);
+    });
+  }
+  $("detail-body").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open]");
+    if (b) openDetail(b.dataset.open, { fly: true, push: true });
+  });
+
+  async function loadWeather(o, req) {
+    const box = () => document.getElementById("d-weather");
+    try {
+      const w = await getJSON(`/api/weather/observation/${encodeURIComponent(o.id)}`, { signal: req.signal });
+      if (req.current() && box()) box().innerHTML = weatherHtml(w);
+    } catch (e) {
+      if (!e.aborted && req.current() && box()) box().innerHTML = `<div class="status-box">Meteoroloji alınamadı: ${esc(e.message)}. Diğer bilgiler etkilenmedi.</div>`;
+    }
+  }
+  function weatherHtml(w) {
+    const p = w.primary, job = w.cdsJob;
+    const jobLine = job ? `<p class="note">CDS ERA5 işi: ${esc(F.STATUS_TEXT[job.state] || job.state)}${job.errorClass ? ` · ${esc(F.ERROR_CLASS[job.errorClass] || job.errorClass)}` : ""}</p>` : "";
+    if (!p) {
+      const msg = w.status === "empty" ? "Gözlem anına ait meteoroloji henüz yok. ERA5 yeniden analizi birkaç gün gecikmeyle yayımlanır; güncel tahmin bu gözleme bağlanmaz."
+        : w.status === "unavailable" ? `Meteoroloji şu an alınamıyor (${esc(F.ERROR_CLASS[w.error?.errorClass] || "bilinmeyen neden")}).` : esc(w.message || F.STATUS_TEXT[w.status] || w.status);
+      return `<div class="status-box">${msg}</div>${jobLine}`;
+    }
+    const v = p.variables || {};
+    const val = (keys, d = 1) => { for (const k of keys) if (v[k] && F.num(v[k].value)) return `${fmtNum(v[k].value, d)} ${esc(v[k].unit || "")}`; return "–"; };
+    const off = p.timeOffsetMinutes;
+    return `
+      <div class="wind-row">${F.windArrow(p.wind10?.to)}<div><b>10 m rüzgâr</b><br>${esc(F.windText(p.wind10))}</div></div>
+      ${p.wind100 ? `<div class="wind-row">${F.windArrow(p.wind100?.to)}<div><b>100 m rüzgâr</b><br>${esc(F.windText(p.wind100))}</div></div>` : ""}
+      <dl class="wx-main">
+        <div><dt>Sıcaklık (2 m)</dt><dd>${val(["temperature_2m", "t2m"])}</dd></div>
+        <div><dt>Bulutluluk</dt><dd>${val(["cloud_cover", "tcc"], 0)}</dd></div>
+        <div><dt>Yağış (önceki 1 sa)</dt><dd>${val(["precipitation", "tp"])}</dd></div>
+        <div><dt>Bağıl nem</dt><dd>${val(["relative_humidity_2m", "rh"], 0)}</dd></div>
+        <div><dt>Yüzey basıncı</dt><dd>${val(["surface_pressure", "sp"], 0)}</dd></div>
+        <div><dt>Sınır tabakası</dt><dd>${val(["boundary_layer_height", "blh"], 0)}</dd></div>
+      </dl>
+      ${kv([
+        ["Meteoroloji saati", `${esc(fmtLocal(p.validAt) || "–")}<small>${esc(fmtUtc(p.validAt) || "")} · gözlemden ${F.num(off) ? `${off > 0 ? "+" : ""}${off} dk` : "?"}</small>`],
+        ["Kaynak yolu", `${esc(p.accessPath)} <small>${esc(p.dataset)} · yeniden analiz · ${esc(p.temporalResolution)} · ${esc(p.spatialResolution)}</small>`],
+      ])}
+      <p class="note">Ok rüzgârın taşıdığı yönü gösterir (yukarı = kuzey); derece rüzgârın geldiği yöndür.${p.attribution ? ` ${esc(p.attribution)}.` : ""}</p>${jobLine}`;
+  }
+  async function loadSurface(o, req) {
+    const box = () => document.getElementById("d-surface");
+    try {
+      const s = await getJSON(`/api/imagery/${encodeURIComponent(o.id)}`, { signal: req.signal });
+      if (!req.current() || !box()) return;
+      let html;
+      if (s.status === "ready") html = `<figure class="d-img"><img src="${esc(s.imageUrl)}" alt="Sentinel-2 L2A doğal renkli yüzey görüntüsü" loading="lazy"><figcaption>Yüzey görüntüsü · ${esc(s.collection)} · sahne ${esc(fmtLocal(s.scene.datetime))} · bulut %${fmtNum(s.scene.cloudCover)} · ${esc(s.note)}</figcaption></figure>`;
+      else if (s.status === "not_configured") html = '<div class="status-box">Yüzey görüntüsü erişimi henüz bağlanmamış.</div>';
+      else if (s.status === "empty") html = `<div class="status-box">${esc(s.message)}</div>`;
+      else if (s.status === "queued") html = '<div class="status-box">Yüzey görüntüsü hazırlanıyor. Birkaç dakika sonra yeniden açın.</div>';
+      else html = `<div class="status-box">Yüzey görüntüsü alınamadı (${esc(F.ERROR_CLASS[s.errorClass] || s.errorClass || "bilinmeyen neden")}).</div>`;
+      box().innerHTML = `<h3>Yüzey görüntüsü</h3>${html}`;
+    } catch (e) {
+      if (!e.aborted && req.current() && box()) box().innerHTML = `<h3>Yüzey görüntüsü</h3><div class="status-box">Alınamadı: ${esc(e.message)}</div>`;
+    }
+  }
+
+  async function openSource(id, { fly = false, push = false, opener = null } = {}) {
+    const req = detailReq();
+    state.selected = null;
+    state.selectedSource = id;
+    detailOpener = opener || document.activeElement;
+    for (const k of Object.keys(popovers)) closePopover(k, false);
+    showDetail();
+    $("detail-body").innerHTML = '<div class="skeleton"></div>';
+    try {
+      const r = await getJSON(`/api/source-summaries/${encodeURIComponent(id)}`, { signal: req.signal });
+      if (!req.current()) return;
+      const s = r.source;
+      if (fly) flyTo(s.lon, s.lat);
+      map.getSource("selected").setData({ type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Point", coordinates: [s.lon, s.lat] }, properties: {} }] });
+      highlightSelection();
+      // Kaynağa bağlı gözlemlerden yalnızca Türkiye kapsamındakiler listelenir
+      const inScope = new Set(state.all.map((x) => x.id));
+      const plumes = r.observations.filter((x) => inScope.has(x.id));
+      $("detail-body").innerHTML = `
+        <h2 class="d-place" id="d-title" tabindex="-1">${esc(s.locationLabel)}</h2>
+        <p class="d-sub">Kaynak özeti · ${esc(sectorName(s.sectorCode))}<br>Carbon Mapper</p>
+        ${s.detectedMean ? `<p class="d-num"><b>${fmtNum(s.detectedMean.value)}</b><span>kg CH₄/saat · tespitlerin ortalaması</span></p>` : ""}
+        ${s.thumbnail ? `<figure class="d-img"><img src="${esc(s.thumbnail.url)}" alt="${esc(s.thumbnail.kind)}" loading="lazy"><figcaption>En son bağlı gözlemin görüntüsü · ${esc(s.thumbnail.kind)}</figcaption></figure>` : ""}
+        ${sourceBlock(s)}
+        <section class="dsec"><h3>Bağlı gözlemler (${plumes.length})</h3><div class="related">${plumes.map(miniCard).join("")}</div></section>
+        <p class="note">Koordinat sağlayıcının küme merkezidir; tesis adı veya sınırı atanmamıştır.</p>
+        <div class="actions"><a class="btn-secondary small" href="${esc(s.sourceUrl)}" target="_blank" rel="noopener">Özgün kaydı aç · Carbon Mapper ↗</a>
+          <a class="btn-secondary small" href="/hava-ve-iklim.html?lat=${s.lat.toFixed(4)}&lon=${s.lon.toFixed(4)}">Bu konumun hava ve iklimi</a></div>`;
+      $("d-title").focus({ preventScroll: true });
+      writeUrl(push);
+    } catch (e) {
+      if (!e.aborted && req.current()) $("detail-body").innerHTML = `<div class="empty">Kaynak özeti açılamadı: ${esc(e.message)}</div>`;
+    }
+  }
+
+  // ---- İleri/geri: seçili kayıt URL'den eşitlenir ----------------------------------------
+  window.addEventListener("popstate", () => {
+    const u = readUrl();
+    if (u.sel && u.sel !== state.selected) openDetail(u.sel, { fly: true });
+    else if (u.src && u.src !== state.selectedSource) openSource(u.src, { fly: true });
+    else if (!u.sel && !u.src) closeDetail();
+  });
+
+  // ---- Harita araçları -----------------------------------------------------------------------
+  $("zoom-in").onclick = () => map.zoomIn();
+  $("zoom-out").onclick = () => map.zoomOut();
+  $("home").onclick = () => goHome(true);
+
+  // ---- TROPOMI -------------------------------------------------------------------------------
   function range() {
     const end = state.days[state.dayIdx].day;
     if (state.mode === "day") return [end, end];
@@ -141,41 +893,47 @@
     d.setUTCDate(d.getUTCDate() - (Number(state.mode) - 1));
     return [d.toISOString().slice(0, 10), end];
   }
-
   const tropomiReq = latestOnly();
   async function loadTropomi() {
-    if (state.dayIdx < 0) return;
+    if (state.dayIdx < 0 || !$("show-tropomi").checked) { updateCaption(); return; }
     const [start, end] = range();
     const day = state.days[state.dayIdx];
     $("daylabel").innerHTML = state.mode === "day"
       ? `${fmtDay(end)}<small>${esc(PRODUCT[day.source] || "Bu gün için ölçüm yok")}</small>`
-      : `${fmtDay(start)} – ${fmtDay(end)}<small>${state.mode} günlük ortalama · her hücre o dönemdeki geçerli piksellerin ortalaması</small>`;
+      : `${fmtDay(start)} – ${fmtDay(end)}<small>${state.mode} günlük ortalama</small>`;
     $("prev").disabled = state.dayIdx <= 0;
     $("next").disabled = state.dayIdx >= state.days.length - 1;
     const req = tropomiReq();
     try {
-      const data = await getJSON(`/api/tropomi?start=${start}&end=${end}`, { signal: req.signal });
+      const data = await getJSON(`/api/tropomi?start=${start}&end=${end}&scope=tr`, { signal: req.signal });
       if (!req.current()) return;
       state.data = data;
       renderCells();
     } catch (e) {
-      if (!e.aborted) $("tropomi-meta").textContent = `TROPOMI verisi alınamadı: ${e.message}. Haritadaki son çizim korunuyor.`;
+      if (!e.aborted) $("tropomi-meta").textContent = `TROPOMI verisi alınamadı: ${e.message}.`;
     }
     renderSpark();
+    updateCaption();
     writeUrl();
   }
-
+  function updateCaption() {
+    const on = $("show-tropomi").checked && state.dayIdx >= 0;
+    $("tropomi-caption").hidden = !on;
+    $("legend-tropomi").hidden = !on;
+    if (!on) return;
+    const [start, end] = range();
+    const day = state.days[state.dayIdx];
+    $("tropomi-caption").textContent = state.mode === "day"
+      ? `TROPOMI XCH₄ · ${fmtDay(end)} · ${day.source || "ölçüm yok"}`
+      : `TROPOMI XCH₄ · ${fmtDay(start)} – ${fmtDay(end)} ortalaması`;
+    $("lg-mode").textContent = state.view === "anom" ? "· anomali (ppb)" : "· ppb";
+  }
   function renderCells() {
     const d = state.data, st = d.stats, anom = state.view === "anom";
     let lo, hi, colors;
     if (!st) { lo = 1850; hi = 1950; colors = PLASMA; }
-    else if (anom) {
-      const m = Math.max(10, Math.ceil(Math.max(st.median - st.p02, st.p98 - st.median) / 5) * 5);
-      lo = -m; hi = m; colors = DIVERGING;
-    } else {
-      lo = Math.floor(st.p02); hi = Math.ceil(st.p98); colors = PLASMA;
-      if (hi - lo < 10) { lo -= 5; hi += 5; }
-    }
+    else if (anom) { const m = Math.max(10, Math.ceil(Math.max(st.median - st.p02, st.p98 - st.median) / 5) * 5); lo = -m; hi = m; colors = DIVERGING; }
+    else { lo = Math.floor(st.p02); hi = Math.ceil(st.p98); colors = PLASMA; if (hi - lo < 10) { lo -= 5; hi += 5; } }
     const g = d.grid;
     const features = d.cells.map(([j, i, v, n]) => {
       const x = d.lon0 + i * g, y = d.lat0 + j * g;
@@ -188,26 +946,22 @@
     $("legend-bar").style.background = `linear-gradient(90deg, ${colors.join(",")})`;
     const sign = (v) => (anom ? F.signed(v, 0) : fmtNum(v));
     $("lg-min").textContent = sign(lo);
-    $("lg-mid").textContent = anom ? "0 ppb" : `${fmtNum((lo + hi) / 2)} ppb`;
+    $("lg-mid").textContent = anom ? "0" : fmtNum((lo + hi) / 2);
     $("lg-max").textContent = sign(hi);
     $("st-mean").textContent = st ? `${fmtNum(st.mean)} ppb` : "–";
     $("st-max").textContent = st ? `${fmtNum(st.max)} ppb` : "–";
     $("st-cov").textContent = st ? `%${fmtNum(st.coverage * 100)}` : "%0";
     const ref = anom && st ? ` Anomali referansı: seçilen dönemde Türkiye kara hücrelerinin medyanı (${fmtNum(st.median, 1)} ppb).` : "";
-    $("tropomi-meta").textContent = `Ürün: Sentinel-5P TROPOMI CH₄ L2 (S5P_L2__CH4____HiR, sürüm 2), değişken methane_mixing_ratio_bias_corrected, kalite filtresi qa_value > 0,5. `
-      + `Gösterim 0,1° ızgara (yaklaşık 9 × 11 km); TROPOMI pikseli yaklaşık 5,5 × 7 km'dir, yakınlaştırmak çözünürlüğü artırmaz. `
-      + `Kapsama: geçerli ölçüm içeren kara hücrelerinin oranı.${ref} Sütun ortalamasıdır; yer seviyesi konsantrasyonu veya tesis emisyonu değildir.`;
+    $("tropomi-meta").textContent = `Ürün: Sentinel-5P TROPOMI CH₄ L2 (S5P_L2__CH4____HiR, sürüm 2), methane_mixing_ratio_bias_corrected, qa_value > 0,5. `
+      + `0,1° ızgara; TROPOMI pikseli yaklaşık 5,5 × 7 km, yakınlaştırmak çözünürlüğü artırmaz. Yalnızca merkezi Türkiye içinde kalan hücreler gösterilir; sınırda ekran görüntüsü maskeyle kırpılır, değerler değişmez.${ref} Sütun ortalamasıdır; tesis emisyonu değildir.`;
   }
-
   function renderSpark() {
-    const svg = $("spark");
-    const n = state.days.length;
+    const svg = $("spark"), n = state.days.length;
     if (n < 2) { svg.innerHTML = ""; return; }
-    const pts = state.days.map((d, k) => ({ k, v: d.mean, c: d.coverage })).filter((p) => p.v != null);
+    const pts = state.days.map((d, k) => ({ k, v: d.mean })).filter((p) => p.v != null);
     const vs = pts.map((p) => p.v);
     const lo = Math.min(...vs) - 2, hi = Math.max(...vs) + 2;
-    const X = (k) => 6 + (k / Math.max(1, n - 1)) * 288;
-    const Y = (v) => 46 - ((v - lo) / (hi - lo)) * 40;
+    const X = (k) => 6 + (k / Math.max(1, n - 1)) * 288, Y = (v) => 46 - ((v - lo) / (hi - lo)) * 40;
     let h = "";
     state.days.forEach((d, k) => { if (d.coverage > 0) h += `<rect class="cov" x="${X(k) - 1}" y="${70 - d.coverage * 18}" width="2" height="${d.coverage * 18}"/>`; });
     if (state.mode !== "day" && state.dayIdx >= 0) {
@@ -220,7 +974,6 @@
     if (sel) h += `<circle class="pt sel" cx="${X(sel.k)}" cy="${Y(sel.v)}" r="3.5"/>`;
     svg.innerHTML = h;
   }
-
   $("spark").addEventListener("click", (e) => {
     const n = state.days.length;
     if (!n) return;
@@ -232,31 +985,31 @@
   });
   $("prev").onclick = () => { state.dayIdx--; loadTropomi(); };
   $("next").onclick = () => { state.dayIdx++; loadTropomi(); };
-
   function bindSeg(id, key, cb) {
-    const set = (val) => [...$(id).children].forEach((x) => {
-      const on = x.dataset[key] === val;
-      x.classList.toggle("on", on);
-      x.setAttribute("aria-pressed", String(on));
-    });
-    $(id).addEventListener("click", (e) => {
-      const b = e.target.closest("button");
-      if (!b) return;
-      state[key] = b.dataset[key];
-      set(state[key]);
-      cb();
-    });
+    const set = (val) => [...$(id).children].forEach((x) => { const on = x.dataset[key] === val; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
+    $(id).addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; state[key] = b.dataset[key]; set(state[key]); cb(); });
     return set;
   }
   const setMode = bindSeg("mode", "mode", loadTropomi);
-  const setView = bindSeg("view", "view", () => { if (state.data) renderCells(); writeUrl(); });
-  $("show-tropomi").onchange = (e) => { map.setLayoutProperty("cells", "visibility", e.target.checked ? "visible" : "none"); writeUrl(); };
-
-  async function loadDays(keep) {
-    const prev = keep ? state.days[state.dayIdx]?.day : initial.day;
-    state.days = await getJSON("/api/days");
+  const setView = bindSeg("view", "view", () => { if (state.data) renderCells(); updateCaption(); writeUrl(); });
+  function setOpacity() {
+    const v = Number($("t-opacity").value);
+    map.setPaintProperty("cells", "fill-opacity", v / 100);
+    $("t-op-val").textContent = `%${100 - v} saydam`;
+  }
+  $("t-opacity").addEventListener("input", () => { setOpacity(); writeUrl(); });
+  function setTropomi(on) {
+    $("show-tropomi").checked = on;
+    $("tropomi-controls").hidden = !on;
+    map.setLayoutProperty("cells", "visibility", on ? "visible" : "none");
+    if (on && !state.data) loadTropomi(); else updateCaption();
+    writeUrl();
+  }
+  $("show-tropomi").onchange = (e) => setTropomi(e.target.checked);
+  async function loadDays() {
+    try { state.days = await getJSON("/api/days"); } catch (e) { state.days = []; }
     if (!state.days.length) { state.dayIdx = -1; $("daylabel").textContent = "Henüz işlenmiş TROPOMI günü yok"; return; }
-    let idx = prev ? state.days.findIndex((d) => d.day === prev) : -1;
+    let idx = initial.day ? state.days.findIndex((d) => d.day === initial.day) : -1;
     if (idx < 0) {
       idx = state.days.length - 1;
       for (let k = state.days.length - 1; k >= 0; k--) if (state.days[k].coverage >= 0.05) { idx = k; break; }
@@ -264,396 +1017,29 @@
     state.dayIdx = idx;
   }
 
-  // ---- Gözlemler ---------------------------------------------------------------------
-  const emissionText = (e) => (e && F.num(e.value)
-    ? `${fmtNum(e.value)} kg CH₄/sa` + (e.uncertainty && F.num(e.uncertainty.value) ? ` ± ${fmtNum(e.uncertainty.value)}` : "")
-    : "Tahmin yok");
-
-  function fillSelect(id, values, current) {
-    const sel = $(id);
-    sel.length = 1;
-    for (const [v, label] of values) sel.add(new Option(label, v));
-    sel.value = values.some(([v]) => v === current) ? current : "";
-  }
-
-  function query() {
-    const q = new URLSearchParams({ limit: "2000" });
-    if ($("f-sector").value) q.set("sector", $("f-sector").value);
-    if ($("f-sensor").value) q.set("sensor", $("f-sensor").value);
-    if ($("f-period").value) q.set("days", $("f-period").value);
-    q.set("sort", $("f-sort").value);
-    if ($("f-emission").checked) q.set("emission_only", "true");
-    return q;
-  }
-
-  const obsReq = latestOnly();
-  async function loadObservations() {
-    const req = obsReq();
-    $("obs-summary").textContent = "Yükleniyor…";
-    try {
-      const r = await getJSON(`/api/observations?${query()}`, { signal: req.signal });
-      if (!req.current()) return;
-      state.items = r.items;
-      state.total = r.total;
-      if (!state.facets) {
-        state.facets = r.facets;
-        fillSelect("f-sector", r.facets.sectors.map((s) => [s, sectorName(s)]).sort((a, b) => a[1].localeCompare(b[1], "tr")), initial.sector);
-        fillSelect("f-sensor", r.facets.sensors.map((s) => [s, s]), initial.sensor);
-        if ($("f-sector").value !== initial.sector || $("f-sensor").value !== initial.sensor) return loadObservations();
-      }
-      state.shown = PAGE;
-      renderObservations();
-    } catch (e) {
-      if (e.aborted) return;
-      $("obs-summary").textContent = `Gözlemler alınamadı: ${e.message}.`;
-      if (state.items.length) $("obs-summary").textContent += " Son alınan liste gösteriliyor.";
-    }
-    writeUrl();
-  }
-
-  function renderObservations() {
-    const list = state.items;
-    const withE = list.filter((o) => o.emission).length;
-    const period = $("f-period").value;
-    $("obs-summary").textContent = `${list.length} / ${state.total} gözlem · ${withE} kayıtta emisyon tahmini`;
-    $("tab-count").textContent = `(${list.length})`;
-    const rng = state.facets?.observedRange;
-    const span = rng ? `${new Date(rng[0]).getUTCFullYear()}–${new Date(rng[1]).getUTCFullYear()}` : "–";
-    const tro = state.days[state.dayIdx]?.day;
-    $("obs-range").textContent = (period ? `Bulut gözlemleri: son ${period} gün (gözlem zamanına göre)` : `Bulut gözlemleri: tüm dönem (${span})`)
-      + (tro ? ` · TROPOMI katmanı: ${fmtDay(tro)}${state.mode !== "day" ? ` ile biten ${state.mode} gün` : ""}` : "");
-    map.getSource("obs").setData({ type: "FeatureCollection", features: list.map((o) => ({
-      type: "Feature", geometry: o.geometry, properties: { id: o.id, hasEmission: !!o.emission } })) });
-    map.getSource("footprints").setData({ type: "FeatureCollection", features: list.filter((o) => o.footprint).map((o) => ({
-      type: "Feature", geometry: o.footprint, properties: { id: o.id } })) });
-    syncPlumeImages();
-    renderList();
-  }
-
-  function renderList() {
-    const items = state.items.slice(0, state.shown);
-    $("obs-list").innerHTML = items.length ? items.map((o) => {
-      const when = o.observedAt ? fmtShort(o.observedAt) : "Gözlem zamanı doğrulanmadı";
-      const paths = o.accessPaths.length > 1 ? `<span class="tag">${o.accessPaths.length} erişim yolu</span>` : "";
-      return `<li><button class="obs-item${state.selected === o.id ? " sel" : ""}" data-id="${esc(o.id)}">
-        <span class="oi-top"><span class="oi-date">${esc(when)}</span><span class="oi-emi">${esc(emissionText(o.emission))}</span></span>
-        <span class="oi-meta">${esc(o.sensor ?? "Sensör belirtilmemiş")} · ${esc(o.provider)} · ${esc(sectorName(o.sectorCode))}${paths}</span>
-      </button></li>`;
-    }).join("") : `<li class="muted">Bu filtrelerle gözlem yok. Bu, metan olmadığı anlamına gelmez.</li>`;
-    $("obs-more").hidden = state.items.length <= state.shown;
-  }
-
-  $("obs-list").addEventListener("click", (e) => {
-    const b = e.target.closest("button.obs-item");
-    if (b) openDetail(b.dataset.id, { fly: true, opener: b, focus: true });
-  });
-  $("obs-more").onclick = () => { state.shown += PAGE; renderList(); };
-  for (const id of ["f-sector", "f-sensor", "f-period", "f-sort", "f-emission"]) $(id).addEventListener("change", loadObservations);
-  $("show-plumes").onchange = (e) => {
-    for (const id of ["obs", "footprints"]) map.setLayoutProperty(id, "visibility", e.target.checked ? "visible" : "none");
-    syncPlumeImages();
-  };
-
-  // CSV: listede ve haritada görünen filtrelenmiş kümenin aynısı
-  $("download").onclick = () => {
-    const cols = ["id", "provider", "sensor", "observedAt", "publishedAt", "ingestedAt", "lat", "lon", "sectorCode",
-      "emission_kg_h", "uncertainty_kg_h", "processingVersion", "sourceId", "accessPaths", "sourceUrl"];
-    const cell = (v) => (v == null ? "" : /[",\n;]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-    const rows = state.items.map((o) => [o.id, o.provider, o.sensor, o.observedAt, o.publishedAt, o.ingestedAt, o.lat, o.lon,
-      o.sectorCode, o.emission?.value, o.emission?.uncertainty?.value, o.processingVersion, o.sourceId,
-      o.accessPaths.map((a) => `${a.provider}:${a.id}`).join(" | "), o.sourceUrl].map(cell).join(","));
-    const blob = new Blob(["﻿" + [cols.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `metan-gozlemleri-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
-
-  // Sağlayıcı artış görüntüleri yalnızca yakınlaştırınca ve görünen alandakiler için yüklenir
-  const plumeImages = new Set();
-  function syncPlumeImages() {
-    const on = $("show-plumes").checked;
-    const visible = new Set(state.items.map((o) => o.id));
-    plumeImages.forEach((id) => map.setLayoutProperty(`img-${id}`, "visibility", on && visible.has(id) ? "visible" : "none"));
-    addPlumeImages();
-  }
-  function addPlumeImages() {
-    if (!$("show-plumes").checked || map.getZoom() < PLUME_IMG_ZOOM) return;
-    const v = map.getBounds();
-    for (const o of state.items) {
-      const b = o.raster?.bounds;
-      if (!o.raster?.png || !b || plumeImages.has(o.id)) continue;
-      if (b[2] < v.getWest() || b[0] > v.getEast() || b[3] < v.getSouth() || b[1] > v.getNorth()) continue;
-      const id = `img-${o.id}`;
-      map.addSource(id, { type: "image", url: o.raster.png, coordinates: [[b[0], b[3]], [b[2], b[3]], [b[2], b[1]], [b[0], b[1]]] });
-      map.addLayer({ id, type: "raster", source: id, minzoom: PLUME_IMG_ZOOM, paint: { "raster-fade-duration": 0 } }, "footprints");
-      plumeImages.add(o.id);
-    }
-  }
-
-  // ---- Kaynak özetleri -----------------------------------------------------------------
-  async function loadSources() {
-    try {
-      const r = await getJSON("/api/source-summaries");
-      state.sources = r.items;
-      map.getSource("sources").setData({ type: "FeatureCollection", features: r.items.map((s) => ({
-        type: "Feature", geometry: { type: "Point", coordinates: [s.lon, s.lat] }, properties: { id: s.id } })) });
-    } catch (e) { state.sources = []; }
-  }
-  const setSourcesVisible = (on) => map.setLayoutProperty("sources", "visibility", on ? "visible" : "none");
-  $("show-sources").onchange = (e) => { setSourcesVisible(e.target.checked); writeUrl(); };
-
-  // ---- Detay çekmecesi -------------------------------------------------------------------
-  const detailReq = latestOnly();
-  let opener = null;
-
-  function showDrawer() {
-    const d = $("detail");
-    if (d.hidden) { d.hidden = false; requestAnimationFrame(() => map.resize()); }
-    d.scrollTop = 0;
-  }
-
-  function kv(rows) {
-    return `<dl class="kv">${rows.filter(Boolean).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl>`;
-  }
-  const timeCell = (iso) => (iso ? `${esc(fmtLocal(iso))}<small>${esc(fmtUtc(iso))}</small>` : F.notProvided);
-  const uncertaintyText = (e) => {
-    const u = e?.uncertainty;
-    if (u && F.num(u.lower) && F.num(u.upper)) return `${fmtNum(u.lower)}–${fmtNum(u.upper)} kg CH₄/sa · ${esc(u.label || "istatistiksel tanımı kayıtta belirtilmemiş")}`;
-    if (u && F.num(u.value)) return `± ${fmtNum(u.value)} kg CH₄/sa · ${esc(u.label || "sağlayıcının simetrik belirsizliği; istatistiksel tanımı kayıtta belirtilmemiş")}`;
-    return F.notProvided;
-  };
-
-  async function openDetail(id, { fly = false, opener: op = null, focus = false } = {}) {
-    const req = detailReq();
-    state.selected = id;
-    opener = op || document.activeElement;
-    renderList();
-    $("detail-kind").textContent = "Metan bulutu gözlemi";
-    $("detail-title").textContent = "Yükleniyor…";
-    $("detail-sub").textContent = "";
-    $("detail-body").innerHTML = "";
-    showDrawer();
-    if (matchMedia("(max-width: 860px)").matches) setTab("map");
+  // ---- Uydu konumları (yalnızca Türkiye üzerindeyken) ve geçişler ----------------------------
+  const satMarkers = {};
+  async function loadPositions() {
+    const on = $("show-sats").checked;
+    map.setLayoutProperty("sat-ahead", "visibility", on ? "visible" : "none");
+    if (!on) { Object.values(satMarkers).forEach((m) => m.remove()); return; }
     let r;
-    try {
-      r = await getJSON(`/api/observations/${encodeURIComponent(id)}`, { signal: req.signal });
-    } catch (e) {
-      if (!e.aborted && req.current()) $("detail-title").textContent = `Gözlem açılamadı: ${e.message}`;
-      return;
-    }
-    if (!req.current()) return;
-    const o = r.observation;
-    const [lon, lat] = o.geometry.coordinates;
-    map.getSource("selected").setData({ type: "FeatureCollection", features: [{ type: "Feature", geometry: o.geometry, properties: {} }] });
-    if (fly) map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), PLUME_IMG_ZOOM) });
-    $("detail-title").textContent = `${o.sensor ?? "Sensör belirtilmemiş"} · ${o.observedAt ? new Date(o.observedAt).getUTCFullYear() : "yıl doğrulanmadı"}`;
-    $("detail-sub").textContent = `Özgün kayıt kimliği: ${o.providerId || o.id} · ${o.locationLabel}`;
-    $("detail-body").innerHTML = detailHtml(o, r.sourceSummary, r.relatedObservations);
-    if (focus) $("detail-title").focus();
-    writeUrl();
-    loadWeather(o, req);
-    loadSurface(o, req);
-  }
-
-  function detailHtml(o, src, related) {
-    const e = o.emission;
-    const alt = (o.alternateEstimates || []).map((a) => `<li>${esc(a.provider)} (${esc(a.id)}): ${a.emission ? esc(emissionText(a.emission)) : "emisyon tahmini yayımlanmamış"}${a.maxEnhancement?.value != null ? ` · en yüksek artış ${fmtNum(a.maxEnhancement.value)} ${esc(a.maxEnhancement.unit)}` : ""}${a.processingVersion ? ` · ${esc(a.processingVersion)}` : ""}</li>`).join("");
-    const access = o.accessPaths.map((a) => `<li><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.provider)} — ${esc(a.id)} ↗</a>${a.kind ? ` <small class="muted">${esc(a.kind)}</small>` : ""}</li>`).join("");
-    const attribution = src
-      ? `Carbon Mapper bu bulutu ${esc(String(src.clusterRadiusM ?? "?"))} m kümeleme yarıçaplı kaynak kaydına bağlıyor (${esc(src.providerId)}). Bu sağlayıcı kümelemesidir; tesis doğrulaması değildir.`
-      : "Bu kayıt için sağlayıcı kaynak kümelemesi veya doğrulanmış tesis eşleştirmesi yok.";
-    return `
-      <section class="dsec"><h3>Zaman</h3>${kv([
-        ["Gözlem", timeCell(o.observedAt)],
-        ["Yayımlanma", timeCell(o.publishedAt)],
-        ["Sisteme alınma", timeCell(o.ingestedAt)],
-      ])}<p class="note">Gözlem yılı sağlayıcının tarih alanından alınır; kayıt kimliğinden türetilmez.</p></section>
-      <section class="dsec"><h3>Emisyon tahmini (bu gözlem)</h3>
-        ${e ? `<p class="big">${fmtNum(e.value)} kg CH₄/saat</p>${kv([["Belirsizlik", uncertaintyText(e)], ["Sağlayıcı", esc(o.provider)]])}`
-          : `<div class="status-box">Sağlayıcı bu gözlem için emisyon tahmini yayımlamadı. Bu, sıfır emisyon anlamına gelmez.</div>`}
-        ${alt ? `<p class="note">Aynı gözlemin diğer erişim yolundaki tahmin (bağımsız doğrulama değildir):</p><ul class="note">${alt}</ul>` : ""}
-        ${o.mergeNote ? `<p class="note">${esc(o.mergeNote)}</p>` : ""}
-      </section>
-      <section class="dsec"><h3>Kayıt</h3>${kv([
-        ["Sensör / platform", `${esc(o.sensor ?? "–")}${o.platform ? ` <small>${esc(o.platform)}</small>` : ""}`],
-        ["Sağlayıcı", esc(o.provider)],
-        ["Sektör", esc(sectorName(o.sectorCode))],
-        ["İşlem sürümü", esc(o.processingVersion || F.notProvided)],
-        o.gsdM ? ["Yer örneklemesi", `${fmtNum(o.gsdM)} m`] : null,
-        ["Kalite", esc(o.qualityNote || "Sağlayıcı kalite alanı boş")],
-        ["Kaynak eşleştirmesi", esc(attribution)],
-        ["Görüntü", o.raster ? "Sağlayıcının artış görüntüsü haritada katman olarak (yakınlaştırın). Renk ölçeğinin sayısal lejantı API yanıtında yok." : o.footprint ? "NASA EMIT bulut sınırı haritada çizgi olarak (yakınlaştırın)." : "Bu kayıtta görüntü yok; haritadaki işaret yalnızca tespit noktasıdır."],
-      ])}</section>
-      <section class="dsec" id="d-weather"><h3>Gözlem anına ait meteoroloji</h3><div class="status-box">Yükleniyor…</div></section>
-      ${src ? sourceHtml(src, related) : ""}
-      <section class="dsec" id="d-surface"><h3>Yüzey görüntüsü</h3><div class="status-box">Yükleniyor…</div></section>
-      <section class="dsec understand"><h3>Bu ölçümü anlamak</h3>${understandHtml()}</section>
-      <section class="dsec"><h3>Özgün kaydı aç</h3><ul class="related">${access}</ul>
-        <div class="actions"><button class="btn" type="button" id="d-zoom">Haritada yakınlaştır</button>
-        <a class="btn" href="/hava-ve-iklim.html?obs=${encodeURIComponent(o.id)}">Hava ve İklim'de aç</a></div></section>`;
-  }
-
-  function sourceHtml(src, related) {
-    const dm = src.detectedMean, pw = src.persistenceWeighted;
-    const rel = related.length
-      ? `<ul class="related">${related.map((x) => `<li><button class="obs-item" data-open="${esc(x.id)}"><span class="oi-top"><span class="oi-date">${esc(fmtShort(x.observedAt) || "zaman yok")}</span><span class="oi-emi">${esc(emissionText(x.emission))}</span></span><span class="oi-meta">${esc(x.sensor ?? "")}</span></button></li>`).join("")}</ul>`
-      : `<p class="note">Bu kaynak kaydında listede gösterilebilen başka gözlem yok.</p>`;
-    return `<section class="dsec"><h3>Kaynak özeti (Carbon Mapper) — tek bulut değildir</h3>${kv([
-      ["Kaynak kaydı", esc(src.providerId)],
-      ["Dönem", `${esc(src.firstObserved || "?")} – ${esc(src.lastObserved || "?")}`],
-      ["Gözlem / tespit tarihi", `${fmtNum(src.observationDateCount)} / ${fmtNum(src.detectionDateCount)} <small>Sağlayıcının saydığı uygun gözlem ve tespit tarihleri</small>`],
-      ["Tespitlerin ortalaması", dm ? `${fmtNum(dm.value)} kg/sa${dm.uncertainty ? ` ± ${fmtNum(dm.uncertainty.value)}` : ""}` : F.notProvided],
-      ["Süreklilikle ağırlıklı ortalama", pw ? `${fmtNum(pw.value)} kg/sa <small>Sağlayıcı alanı: tespit ortalaması × (tespit tarihi / gözlem tarihi)</small>` : F.notProvided],
-    ])}<p class="note">Kaynak ortalaması bir dönemi özetler; bu bulutun kendi tahmini yukarıdadır. Aynı kaynağın diğer kayıtları:</p>${rel}</section>`;
-  }
-
-  function understandHtml() {
-    const g = state.content?.glossary;
-    if (!g) return `<p><a href="/veriyi-anlamak.html">Veriyi Anlamak</a> sayfasında gözlem zamanı, birimler ve belirsizlik açıklanır.</p>`;
-    const pick = ["emisyon", "belirsizlik", "gecikme", "ruzgar"].map((id) => g.find((x) => x.id === id)).filter(Boolean);
-    return pick.map((x) => `<p><b>${esc(x.title)}.</b> ${esc(x.text)}</p>`).join("")
-      + `<p><a href="/uydular-nasil-olcer.html#kavramlar">Tüm kavramlar</a> · <a href="/veriyi-anlamak.html">Veriyi Anlamak</a></p>`;
-  }
-
-  $("detail-body").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-open]");
-    if (b) { openDetail(b.dataset.open, { fly: true, focus: true }); return; }
-    if (e.target.id === "d-zoom") {
-      const it = state.items.find((x) => x.id === state.selected);
-      const c = it?.geometry?.coordinates;
-      if (c) map.flyTo({ center: c, zoom: Math.max(map.getZoom(), PLUME_IMG_ZOOM + 3) });
-    }
-  });
-
-  async function loadWeather(o, req) {
-    const box = () => document.getElementById("d-weather");
-    try {
-      const w = await getJSON(`/api/weather/observation/${encodeURIComponent(o.id)}`, { signal: req.signal });
-      if (!req.current() || !box()) return;
-      box().innerHTML = `<h3>Gözlem anına ait meteoroloji</h3>${weatherHtml(w)}`;
-    } catch (e) {
-      if (!e.aborted && req.current() && box()) box().innerHTML = `<h3>Gözlem anına ait meteoroloji</h3><div class="status-box">Meteoroloji alınamadı: ${esc(e.message)}. Diğer bilgiler etkilenmedi.</div>`;
-    }
-  }
-
-  function weatherHtml(w) {
-    const p = w.primary;
-    const job = w.cdsJob;
-    const jobLine = job ? `<p class="note">CDS ERA5 işi: ${esc(F.STATUS_TEXT[job.state] || job.state)}${job.remoteId ? ` · iş kimliği ${esc(job.remoteId)}` : ""}${job.errorClass ? ` · ${esc(F.ERROR_CLASS[job.errorClass] || job.errorClass)}` : ""}</p>` : "";
-    if (!p) {
-      const msg = w.status === "empty"
-        ? "Gözlem anına ait meteoroloji henüz yok. ERA5 yeniden analizi birkaç gün gecikmeyle yayımlanır; güncel tahmin bu gözleme bağlanmaz."
-        : w.status === "unavailable" ? `Meteoroloji şu an alınamıyor (${esc(F.ERROR_CLASS[w.error?.errorClass] || "bilinmeyen neden")}).` : esc(w.message || F.STATUS_TEXT[w.status] || w.status);
-      return `<div class="status-box">${msg}</div>${jobLine}`;
-    }
-    const v = p.variables || {};
-    const val = (k, d = 1) => (v[k] && F.num(v[k].value) ? `${fmtNum(v[k].value, d)} ${esc(v[k].unit || "")}` : "–");
-    const temp = v.temperature_2m ? val("temperature_2m") : val("t2m");
-    const rh = v.relative_humidity_2m ? val("relative_humidity_2m", 0) : val("rh", 0);
-    const pres = v.surface_pressure ? val("surface_pressure", 0) : val("sp", 0);
-    const cloud = v.cloud_cover ? val("cloud_cover", 0) : val("tcc", 0);
-    const prec = v.precipitation ? val("precipitation") : val("tp");
-    const blh = v.boundary_layer_height ? val("boundary_layer_height", 0) : val("blh", 0);
-    const off = p.timeOffsetMinutes;
-    return `
-      <div class="wind-row">${F.windArrow(p.wind10?.to)}<div><b>10 m rüzgâr</b><br>${esc(F.windText(p.wind10))}</div></div>
-      ${p.wind100 ? `<div class="wind-row">${F.windArrow(p.wind100?.to)}<div><b>100 m rüzgâr</b><br>${esc(F.windText(p.wind100))}</div></div>` : ""}
-      <dl class="wx-main">
-        <div><dt>Sıcaklık (2 m)</dt><dd>${temp}</dd></div>
-        <div><dt>Bulutluluk</dt><dd>${cloud}</dd></div>
-        <div><dt>Yağış (önceki 1 sa)</dt><dd>${prec}</dd></div>
-        <div><dt>Bağıl nem</dt><dd>${rh}</dd></div>
-        <div><dt>Yüzey basıncı</dt><dd>${pres}</dd></div>
-        <div><dt>Sınır tabakası</dt><dd>${blh}</dd></div>
-      </dl>
-      ${kv([
-        ["Meteoroloji saati", `${esc(fmtLocal(p.validAt) || "–")}<small>${esc(fmtUtc(p.validAt) || "")} · gözlemden ${F.num(off) ? `${off > 0 ? "+" : ""}${off} dk` : "?"}</small>`],
-        ["Kaynak yolu", `${esc(p.accessPath)} <small>${esc(p.dataset)} · ${esc(p.kind === "reanalysis" ? "yeniden analiz" : p.kind)} · ${esc(p.temporalResolution)} · ${esc(p.spatialResolution)}</small>`],
-        ["Izgara noktası", `${fmtNum(p.resolvedGridPoint?.lat, 2)}° K, ${fmtNum(p.resolvedGridPoint?.lon, 2)}° D`],
-        ["Alınma", esc(fmtLocal(p.fetchedAt) || "–")],
-      ])}
-      <p class="note">Ok, rüzgârın taşıdığı yönü gösterir (yukarı = kuzey). Yön derecesi rüzgârın geldiği yöndür. Rüzgâr bilgisi kaynak ataması veya yeni emisyon hesabı için kullanılmaz.${p.attribution ? ` ${esc(p.attribution)}.` : ""}</p>
-      ${jobLine}`;
-  }
-
-  async function loadSurface(o, req) {
-    const box = () => document.getElementById("d-surface");
-    try {
-      const s = await getJSON(`/api/imagery/${encodeURIComponent(o.id)}`, { signal: req.signal });
-      if (!req.current() || !box()) return;
-      let html;
-      if (s.status === "ready") {
-        html = `<figure class="surface"><img src="${esc(s.imageUrl)}" alt="Sentinel-2 L2A doğal renkli yüzey görüntüsü, sahne tarihi ${esc(s.scene.datetime)}" loading="lazy">
-          <figcaption class="note">Yüzey görüntüsü · ${esc(s.collection)} · sahne ${esc(fmtLocal(s.scene.datetime))} · bulut %${fmtNum(s.scene.cloudCover)} · ${esc(s.note)} Kaynak: ${esc(s.provider)}.</figcaption></figure>`;
-      } else if (s.status === "not_configured") {
-        html = `<div class="status-box">Yüzey görüntüsü erişimi sunucuda tanımlı değil (Copernicus Data Space).</div>`;
-      } else if (s.status === "empty") {
-        html = `<div class="status-box">${esc(s.message)}</div>`;
-      } else if (s.status === "queued") {
-        html = `<div class="status-box">Yüzey görüntüsü hazırlanıyor (iş: ${esc(s.job?.state || "kuyrukta")}). Birkaç dakika sonra yeniden açın.</div>`;
-      } else {
-        html = `<div class="status-box">Yüzey görüntüsü alınamadı (${esc(F.ERROR_CLASS[s.errorClass] || s.errorClass || "bilinmeyen neden")}).</div>`;
+    try { r = await getJSON("/api/positions"); } catch (e) { return; }
+    const feats = [];
+    for (const [key, s] of Object.entries(r.satellites)) {
+      if (!satMarkers[key]) {
+        const el = document.createElement("div");
+        el.className = "sat-marker";
+        el.innerHTML = `<i style="background:${SAT_COLORS[key]}"></i>${esc(s.name)}`;
+        satMarkers[key] = new maplibregl.Marker({ element: el, anchor: "left", offset: [-7, 0] });
       }
-      box().innerHTML = `<h3>Yüzey görüntüsü</h3>${html}`;
-    } catch (e) {
-      if (!e.aborted && req.current() && box()) box().innerHTML = `<h3>Yüzey görüntüsü</h3><div class="status-box">Alınamadı: ${esc(e.message)}</div>`;
+      satMarkers[key].setLngLat([s.lon, s.lat]);
+      if (geo.contains(s.lon, s.lat)) satMarkers[key].addTo(map); else satMarkers[key].remove();
+      feats.push({ type: "Feature", properties: { color: SAT_COLORS[key] }, geometry: splitLine(s.ahead) });
     }
+    map.getSource("sat-ahead").setData({ type: "FeatureCollection", features: feats });
   }
-
-  async function openSource(id) {
-    const req = detailReq();
-    state.selected = null;
-    renderList();
-    $("detail-kind").textContent = "Kaynak özeti (Carbon Mapper)";
-    $("detail-title").textContent = "Yükleniyor…";
-    $("detail-sub").textContent = "";
-    $("detail-body").innerHTML = "";
-    showDrawer();
-    try {
-      const r = await getJSON(`/api/source-summaries/${encodeURIComponent(id)}`, { signal: req.signal });
-      if (!req.current()) return;
-      const s = r.source;
-      $("detail-title").textContent = `${sectorName(s.sectorCode)} · ${s.locationLabel}`;
-      $("detail-sub").textContent = `Sağlayıcı kaynak kaydı: ${s.providerId}`;
-      $("detail-body").innerHTML = sourceHtml(s, r.observations)
-        + `<section class="dsec"><p class="note">Koordinat sağlayıcının küme merkezidir; tesis adı veya sınırı atanmamıştır.</p>
-           <div class="actions"><a class="btn" href="${esc(s.sourceUrl)}" target="_blank" rel="noopener">Carbon Mapper'da aç ↗</a>
-           <a class="btn" href="/hava-ve-iklim.html?lat=${s.lat.toFixed(4)}&lon=${s.lon.toFixed(4)}">Bu konumun hava ve iklimi</a></div></section>`;
-      $("detail-title").focus();
-    } catch (e) {
-      if (!e.aborted && req.current()) $("detail-title").textContent = `Kaynak özeti açılamadı: ${e.message}`;
-    }
-  }
-
-  function closeDetail() {
-    if ($("detail").hidden) return;
-    detailReq();
-    $("detail").hidden = true;
-    state.selected = null;
-    map.getSource("selected").setData(empty());
-    requestAnimationFrame(() => map.resize());
-    renderList();
-    writeUrl();
-    const back = opener?.dataset?.id && document.querySelector(`.obs-item[data-id="${CSS.escape(opener.dataset.id)}"]`);
-    (back || opener)?.focus?.();
-  }
-  $("detail-close").onclick = closeDetail;
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !document.querySelector(".mobile-menu[open]")) closeDetail(); });
-
-  // ---- Telefon sekmeleri --------------------------------------------------------------
-  function setTab(which) {
-    $("app").dataset.view = which;
-    $("tab-map").setAttribute("aria-selected", String(which === "map"));
-    $("tab-list").setAttribute("aria-selected", String(which === "list"));
-    if (which === "map") requestAnimationFrame(() => map.resize());
-  }
-  $("tab-map").onclick = () => setTab("map");
-  $("tab-list").onclick = () => setTab("list");
-  setTab("map");
-
-  // ---- Geçişler ve uydu konumları ------------------------------------------------------
+  $("show-sats").onchange = () => { loadPositions(); writeUrl(); };
   function countdown(iso) {
     const m = Math.round((new Date(iso) - Date.now()) / 60000);
     if (m <= 0) return "şu an";
@@ -663,13 +1049,9 @@
   function renderPasses() {
     const list = state.passes.slice(0, 8);
     $("passes").innerHTML = list.length ? list.map((p, k) => {
-      const light = p.daylight
-        ? `<span class="badge day">gündüz · ışık koşulu uygun gözlem fırsatı</span>`
-        : `<span class="badge night">gece · optik ölçüm için ışık yok</span>`;
-      return `<li class="pass${state.selPass === k ? " sel" : ""}" data-k="${k}" tabindex="0" role="button">
-        <span class="t">${esc(F.fmtShort(p.closest))}</span><span class="cd">${countdown(p.start)}</span>
-        <span class="meta">${esc(p.name)} ${light}</span></li>`;
-    }).join("") : `<li class="muted">72 saat içinde hesaplanan geçiş yok.</li>`;
+      const light = p.daylight ? '<span class="badge day">gündüz · ışık koşulu uygun</span>' : '<span class="badge night">gece · optik ölçüm için ışık yok</span>';
+      return `<li class="pass${state.selPass === k ? " sel" : ""}" data-k="${k}" tabindex="0" role="button"><span class="t">${esc(fmtShort(p.closest))}</span><span class="cd">${countdown(p.start)}</span><span class="meta">${esc(p.name)} ${light}</span></li>`;
+    }).join("") : '<li class="muted">72 saat içinde hesaplanan geçiş yok.</li>';
   }
   function selectPass(li) {
     const k = Number(li.dataset.k);
@@ -677,153 +1059,104 @@
     const p = state.passes[k];
     map.getSource("pass-track").setData(state.selPass == null ? empty() : { type: "FeatureCollection",
       features: [{ type: "Feature", properties: { color: SAT_COLORS[p.sat] }, geometry: splitLine(p.track) }] });
-    if (state.selPass != null) map.easeTo({ center: [p.closest_lon, p.closest_lat], zoom: Math.min(map.getZoom(), 5) });
     renderPasses();
   }
   $("passes").addEventListener("click", (e) => { const li = e.target.closest("li.pass"); if (li) selectPass(li); });
   $("passes").addEventListener("keydown", (e) => { const li = e.target.closest("li.pass"); if (li && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); selectPass(li); } });
-  async function loadPasses() {
-    try { state.passes = await getJSON("/api/passes"); } catch (e) { state.passes = []; }
-    state.selPass = null;
-    renderPasses();
-  }
-  const satMarkers = {};
-  async function loadPositions() {
-    if (!$("show-sats").checked) return;
-    let r;
-    try { r = await getJSON("/api/positions"); } catch (e) { return; }
-    const feats = [];
-    for (const [key, s] of Object.entries(r.satellites)) {
-      if (!satMarkers[key]) {
-        const el = document.createElement("div");
-        el.className = "sat-marker";
-        el.innerHTML = `<i style="background:${SAT_COLORS[key]}"></i>${esc(s.name)}`;
-        satMarkers[key] = new maplibregl.Marker({ element: el, anchor: "left", offset: [-7, 0] }).setLngLat([s.lon, s.lat]).addTo(map);
-      }
-      satMarkers[key].setLngLat([s.lon, s.lat]);
-      feats.push({ type: "Feature", properties: { color: SAT_COLORS[key] }, geometry: splitLine(s.ahead) });
+  async function loadPasses() { try { state.passes = await getJSON("/api/passes"); } catch (e) { state.passes = []; } renderPasses(); }
+
+  // ---- Durum paneli: bildirimler, gözlem fırsatları, veri durumu ----------------------------
+  const ST_TABS = ["events", "passes", "sources"];
+  function setStatusTab(t) {
+    for (const k of ST_TABS) {
+      const on = k === t;
+      $(`st-tab-${k}`).setAttribute("aria-selected", String(on));
+      $(`st-tab-${k}`).tabIndex = on ? 0 : -1;
+      $(`st-${k}`).hidden = !on;
     }
-    map.getSource("sat-ahead").setData({ type: "FeatureCollection", features: feats });
   }
-  $("show-sats").onchange = (e) => {
-    const on = e.target.checked;
-    Object.values(satMarkers).forEach((m) => (m.getElement().style.display = on ? "" : "none"));
-    map.setLayoutProperty("sat-ahead", "visibility", on ? "visible" : "none");
-    if (on) loadPositions();
-  };
-
-  // ---- Veri durumu ve izleme bildirimleri ---------------------------------------------------
-  const SOURCE_STATE = {
-    ok: ["çalışıyor", "ok"], error: ["hata", "err"], pending: ["hazır, henüz denenmedi", "idle"],
-    not_configured: ["erişim tanımlı değil", "idle"],
-  };
-  const TOKEN_TEXT = { unset: "Token tanımlı değil; herkese açık katalog kullanılıyor.", set: "Token tanımlı; henüz denenmedi.",
-    accepted: "Token kabul edildi.", rejected: "Token reddedildi; herkese açık katalog kullanılıyor." };
-  const t = (iso) => (iso ? fmtShort(iso) : "–");
-
+  for (const k of ST_TABS) $(`st-tab-${k}`).onclick = () => setStatusTab(k);
+  const SOURCE_STATE = { ok: ["çalışıyor", "ok"], error: ["hata", "err"], pending: ["hazır, henüz denenmedi", "idle"], not_configured: ["bağlanmamış", "idle"] };
+  const ts = (iso) => (iso ? fmtShort(iso) : "–");
   function renderSources(list) {
     $("sources").innerHTML = list.map((s) => {
       const [label, cls] = SOURCE_STATE[s.state] ?? [s.state, "idle"];
       const lines = [];
       if (s.state === "not_configured") lines.push("Sunucuda erişim bilgisi yok; bu kaynak kullanılmıyor.");
       else {
-        lines.push(`Son kontrol: ${t(s.last_check)} · son başarılı alma: ${t(s.last_ok)}`);
-        if (s.observations === false) lines.push("Yörünge verisidir; ölçüm değildir.");
-        else if (s.id === "tropomi") lines.push(`Son gözlem günü: ${s.last_observation ? fmtDay(s.last_observation) : "–"}`);
-        else if (s.last_observation) lines.push(`Son gözlem: ${t(s.last_observation)}`);
-        if (s.records != null) lines.push(`${s.records} kayıt${s.duplicates ? ` · ${s.duplicates} tekrar atıldı` : ""}${s.invalid ? ` · ${s.invalid} geçersiz` : ""}`);
-        if (s.collection) lines.push(`Ürün: ${s.collection}`);
-        if (s.id === "carbonmapper" && TOKEN_TEXT[s.token]) lines.push(TOKEN_TEXT[s.token]);
+        lines.push(`Son başarılı alma: ${ts(s.last_ok)}`);
+        if (s.id === "tropomi") lines.push(`Son gözlem günü: ${s.last_observation ? fmtDay(s.last_observation) : "–"}`);
+        if (s.records != null) lines.push(`${s.records} kayıt (sağlayıcı kutusu; harita yalnızca Türkiye içini gösterir)`);
         if (s.state === "error") lines.push(`Son hata: ${F.ERROR_CLASS[s.error_class] || s.error_class || "belirtilmedi"}`);
       }
-      if (s.schedule) lines.push(`Güncelleme: ${s.schedule}`);
-      return `<li><div class="src-head"><span class="src-name">${esc(s.name)}</span><span class="state ${cls}">${esc(label)}</span></div>
-        ${lines.map((l) => `<span class="src-line">${esc(l)}</span>`).join("")}</li>`;
+      return `<li><div class="src-head"><span class="src-name">${esc(s.name)}</span><span class="state ${cls}">${esc(label)}</span></div>${lines.map((l) => `<span class="src-line">${esc(l)}</span>`).join("")}</li>`;
     }).join("");
   }
-
   function eventHtml(a) {
-    const btn = a.plumeId ? `<button class="linkish" data-open="${esc(a.plumeId)}">Kaydı aç</button>` : "";
-    const lag = a.publicationLagDays != null ? ` (gözlemden ${fmtNum(a.publicationLagDays, 1)} gün sonra)` : "";
+    const btn = a.plumeId ? `<button class="linkish" type="button" data-open="${esc(a.plumeId)}">Kaydı aç</button>` : "";
     switch (a.kind) {
       case "new_observation":
       case "past_observation_published":
-        return `<li class="info"><b>${a.kind === "new_observation" ? "Yeni gözlem" : "Geçmiş gözlem yeni yayımlandı"}</b>
-          <span>${esc(a.sensor ?? "Sensör belirtilmemiş")} · gözlem ${esc(t(a.observedAt))} · yayımlama ${esc(t(a.publishedAt))}${esc(lag)} · sisteme alınma ${esc(t(a.ingestedAt))} · emisyon tahmini: ${esc(emissionText(a.emission))}</span>
-          <small>Dayanak: ${esc(a.rule)} Yeni alınan kayıt, salımın bugün başladığını göstermez.</small>${btn}</li>`;
+        return `<li class="info"><b>${a.kind === "new_observation" ? "Yeni gözlem" : "Geçmiş gözlem yeni yayımlandı"}</b><span>${esc(a.sensor ?? "")} · gözlem ${esc(ts(a.observedAt))} · alınma ${esc(ts(a.ingestedAt))} · ${esc(emissionText(a.emission))}</span><small>${esc(a.rule)}</small>${btn}</li>`;
       case "repeated_detection":
-        return `<li class="info"><b>Tekrarlanan tespit</b><span>Kaynak kaydında ${a.plumeCount} bulut · ${fmtNum(a.observationDateCount)} gözlem tarihinde ${fmtNum(a.detectionDateCount)} tespit tarihi (sağlayıcı sayımı).</span><small>Dayanak: ${esc(a.rule)}</small>${btn}</li>`;
+        return `<li class="info"><b>Tekrarlanan tespit</b><span>Kaynak kaydında ${a.plumeCount} bulut.</span><small>${esc(a.rule)}</small>${btn}</li>`;
       case "record_updated":
-        return `<li class="info"><b>Kayıt güncellendi</b><span>${esc(a.plumeId)} · sağlayıcı değişikliği ${esc(t(a.modifiedAt))} · sürüm ${esc(a.previousVersion || "?")} → ${esc(a.version || "?")} · emisyon ${a.previousEmission != null ? fmtNum(a.previousEmission) : "–"} → ${a.emission != null ? fmtNum(a.emission) : "–"} kg/sa</span><small>Dayanak: ${esc(a.rule)}</small>${btn}</li>`;
+        return `<li class="info"><b>Kayıt güncellendi</b><span>${esc(a.plumeId)} · ${esc(ts(a.modifiedAt))}</span><small>${esc(a.rule)}</small>${btn}</li>`;
       case "regional_enhancement": {
-        const r = a.rule, b = a.block;
-        const days = a.days.map((d) => `${fmtDay(d.day)}: ${F.signed(d.anomalyPpb, 1)} ppb (eşik ${F.signed(d.limitPpb, 1)}, kapsama %${fmtNum(d.coverage * 100)})`).join("; ");
-        return `<li class="review"><b>İncelenecek bölgesel artış (TROPOMI)</b><span>Blok ${fmtNum(b.south, 1)}–${fmtNum(b.north, 1)}° K, ${fmtNum(b.west, 1)}–${fmtNum(b.east, 1)}° D · ${esc(days)}</span>
-          <small>Kural ${esc(r.id)}: 0,5° blok ortalaması, referans "${esc(r.reference)}"; blok anomalisi günün blok anomalileri medyanından ${fmtNum(r.madFactor, 1)} sağlam sapma (1,4826·MAD) yukarıda; blok kara hücrelerinin en az %${fmtNum(r.minBlockCoverage * 100)}'i ölçülmüş; qa_value > ${fmtNum(r.qaMin, 1)}; ${r.windowDays} gün içinde en az ${r.minDays} gün. Doğrulanmış tesis kaçağı değildir.</small></li>`;
+        const b = a.block;
+        return `<li class="review"><b>İncelenecek bölgesel artış (TROPOMI)</b><span>${fmtNum(b.south, 1)}–${fmtNum(b.north, 1)}° K, ${fmtNum(b.west, 1)}–${fmtNum(b.east, 1)}° D · ${a.days.length} gün</span><small>Kural ${esc(a.rule.id)}: ${esc(a.rule.reference)}; ${a.rule.windowDays} günde en az ${a.rule.minDays} gün. Doğrulanmış tesis kaçağı değildir.</small></li>`;
       }
       case "source_error":
-        return `<li class="warn"><b>Veri güncellenemedi: ${esc(a.name)}</b><span>Kontrol ${esc(t(a.lastCheck))} · neden: ${esc(F.ERROR_CLASS[a.errorClass] || a.errorClass)} · son başarılı alma ${esc(t(a.lastOk))}</span><small>${esc(a.rule)}</small></li>`;
+        return `<li class="warn"><b>Veri güncellenemedi: ${esc(a.name)}</b><span>Neden: ${esc(F.ERROR_CLASS[a.errorClass] || a.errorClass)} · son başarılı alma ${esc(ts(a.lastOk))}</span></li>`;
       case "stale":
-        return `<li class="warn"><b>Veri güncel değil: ${esc(a.name)}</b><span>Son başarılı alma: ${esc(t(a.lastOk))}</span><small>${esc(a.rule)}</small></li>`;
-      case "token_rejected":
-        return `<li class="warn"><b>${esc(a.name)}: token reddedildi</b><small>${esc(a.rule)}</small></li>`;
-      default:
-        return "";
+        return `<li class="warn"><b>Veri güncel değil: ${esc(a.name)}</b><span>Son başarılı alma: ${esc(ts(a.lastOk))}</span></li>`;
+      default: return "";
     }
   }
-
   async function loadEvents() {
     try {
       const [st, ev] = await Promise.all([getJSON("/api/data-status"), getJSON("/api/monitoring-events")]);
       renderSources(st.sources);
-      $("events-count").textContent = ev.items.length || "";
-      $("events").innerHTML = ev.items.length ? ev.items.map(eventHtml).join("")
-        : `<li class="muted">Son ${ev.windowDays} günde bildirim yok. Bu, yeni salım olmadığını göstermez; yalnızca sisteme yeni kayıt alınmadığını, kaynaklarda hata görülmediğini ve bölgesel kuralın sağlanmadığını belirtir.</li>`;
-    } catch (e) {
-      $("events").innerHTML = `<li class="muted">Bildirimler alınamadı: ${esc(e.message)}</li>`;
-    }
+      $("events-count").textContent = ev.items.length ? `(${ev.items.length})` : "";
+      $("events-dot").hidden = !ev.items.length;
+      $("st-events").innerHTML = ev.items.length ? ev.items.map(eventHtml).join("")
+        : `<li class="muted">Son ${ev.windowDays} günde bildirim yok. Bu, yeni salım olmadığını göstermez.</li>`;
+    } catch (e) { $("st-events").innerHTML = `<li class="muted">Bildirimler alınamadı: ${esc(e.message)}</li>`; }
   }
-  $("events").addEventListener("click", (e) => { const b = e.target.closest("[data-open]"); if (b) openDetail(b.dataset.open, { fly: true, focus: true }); });
-
+  $("st-events").addEventListener("click", (e) => { const b = e.target.closest("[data-open]"); if (b) openDetail(b.dataset.open, { fly: true, push: true }); });
   async function loadStatus() {
     try {
       const s = await getJSON("/api/status");
-      $("status").textContent = s.tropomi_finished ? `TROPOMI son güncelleme: ${fmtShort(s.tropomi_finished)} · ${s.granules} dosya işlendi` : "TROPOMI henüz güncellenmedi";
-    } catch (e) { $("status").textContent = `Durum alınamadı: ${e.message}`; }
+      $("status").textContent = s.tropomi_finished ? `TROPOMI son güncelleme: ${fmtShort(s.tropomi_finished)}` : "TROPOMI henüz güncellenmedi";
+    } catch (e) { $("status").textContent = ""; }
   }
 
-  async function loadContent() {
-    try { state.content = await getJSON(CONTENT_URL); } catch (e) { state.content = null; }
-  }
-
-  // ---- Başlangıç -------------------------------------------------------------------------
+  // ---- Başlangıç ----------------------------------------------------------------------------
   async function init() {
-    $("f-period").value = initial.days;
-    $("f-sort").value = ["observed", "published", "emission"].includes(initial.sort) ? initial.sort : "observed";
-    $("f-emission").checked = initial.em;
-    $("show-tropomi").checked = initial.tropomi;
-    $("show-sources").checked = initial.sources;
-    map.setLayoutProperty("cells", "visibility", initial.tropomi ? "visible" : "none");
-    setSourcesVisible(initial.sources);
-    state.mode = ["day", "7", "30", "90"].includes(initial.mode) ? initial.mode : "day";
-    state.view = initial.view === "anom" ? "anom" : "abs";
+    stateToForm();
+    renderChips();
+    setBase(state.base);
+    $("t-opacity").value = Math.min(90, Math.max(10, initial.op));
+    setOpacity();
     setMode(state.mode);
     setView(state.view);
-    loadContent();
-    try { await loadDays(false); } catch (e) { $("daylabel").textContent = `TROPOMI günleri alınamadı: ${e.message}`; }
-    await Promise.all([loadTropomi(), loadObservations(), loadSources(), loadPasses(), loadPositions(), loadStatus(), loadEvents()]);
-    if (initial.sel) openDetail(initial.sel, { fly: !startView });
-    else if (initial.src) {
-      openSource(initial.src);
-      const s = state.sources.find((x) => x.id === initial.src);
-      if (s && !startView) map.flyTo({ center: [s.lon, s.lat], zoom: 11 });
-    }
+    $("show-sats").checked = initial.sats;
+    $("tab-obs").setAttribute("aria-selected", String(state.tab === "obs"));
+    $("tab-src").setAttribute("aria-selected", String(state.tab === "src"));
+    setResultsOpen(state.resultsOpen || MOBILE());
+    if (!startCam) goHome(false);
+    getJSON(CONTENT_URL).then((c) => { state.content = c; }).catch(() => { state.content = null; });
+    await loadDays();
+    setTropomi(initial.tropomi);
+    await Promise.all([loadObservations(), loadSources(), loadAllForSearch(), loadPasses(), loadPositions(), loadStatus(), loadEvents()]);
+    if (initial.sel) openDetail(initial.sel, { fly: !startCam });
+    else if (initial.src) openSource(initial.src, { fly: !startCam });
     setInterval(loadPositions, 15000);
     setInterval(renderPasses, 60000);
     setInterval(loadPasses, 15 * 60000);
     setInterval(async () => {
       const had = state.days.length;
-      try { await loadDays(true); } catch (e) { return; }
+      await loadDays();
       if (state.days.length !== had) loadTropomi();
       loadStatus();
       loadEvents();

@@ -1,151 +1,228 @@
 <!doctype html>
-<html lang="tr">
+<html lang="tr" data-content-version="2026-11-01-general-3">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Harita | Türkiye Metan İzleyici</title>
   <meta name="description" content="Sentinel-5P TROPOMI, Carbon Mapper ve NASA EMIT uydu verileriyle Türkiye üzerindeki metan (CH₄) gözlemleri.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ed7953'/%3E%3Ctext x='16' y='21' font-size='13' text-anchor='middle' fill='%23111' font-family='sans-serif' font-weight='700'%3ECH4%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23d95c36'/%3E%3Ctext x='16' y='21' font-size='13' text-anchor='middle' fill='%23fff' font-family='sans-serif' font-weight='700'%3ECH4%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="/assets/site.css?v=2026-11-01-general-3">
-  <link rel="stylesheet" href="/assets/map.css?v=2026-11-01-general-3">
+  <link rel="stylesheet" href="/assets/site.css?v=2026-11-01-map-4">
+  <link rel="stylesheet" href="/assets/map.css?v=2026-11-01-map-4">
 </head>
 <body class="mapapp">
-  <a class="skip" href="#sidebar">Sonuç listesine geç</a>
+  <a class="skip" href="#cards">Sonuç listesine geç</a>
   <header class="topbar">
     <a class="brand" href="/" data-map-link><i aria-hidden="true"></i><span>Türkiye Metan İzleyici<small>Veriyi görmek. Ölçümü anlamak.</small></span></a>
     <nav id="site-menu" class="site-menu" aria-label="Ana gezinme"><a href="/" data-map-link aria-current="page">Harita</a><a href="/yuksek-degerleri-yorumlamak.html">Yüksek Değerler</a><a href="/veriyi-anlamak.html">Veriyi Anlamak</a><a href="/uydular-nasil-olcer.html">Uydular Nasıl Ölçer?</a><a href="/hava-ve-iklim.html">Hava ve İklim</a><a href="/kaynaklar.html">Kaynaklar</a></nav>
     <details class="mobile-menu"><summary>Menü</summary><nav class="mobile-links" aria-label="Mobil gezinme"><a href="/" data-map-link aria-current="page">Harita</a><a href="/yuksek-degerleri-yorumlamak.html">Yüksek Değerler</a><a href="/veriyi-anlamak.html">Veriyi Anlamak</a><a href="/uydular-nasil-olcer.html">Uydular Nasıl Ölçer?</a><a href="/hava-ve-iklim.html">Hava ve İklim</a><a href="/kaynaklar.html">Kaynaklar</a></nav></details>
   </header>
 
-  <div class="view-tabs" role="tablist" aria-label="Görünüm">
-    <button role="tab" id="tab-map" aria-controls="mapwrap" aria-selected="true">Harita</button>
-    <button role="tab" id="tab-list" aria-controls="sidebar" aria-selected="false">Sonuçlar <span id="tab-count"></span></button>
-  </div>
+  <main id="app" class="app" data-sheet="peek">
+    <div id="map" role="region" aria-label="Türkiye metan haritası"></div>
+    <div id="tropomi-caption" class="map-caption" hidden aria-live="polite"></div>
 
-  <div class="app" id="app">
-    <aside id="sidebar" class="sidebar" aria-label="Filtreler ve sonuçlar" tabindex="-1">
-      <section class="block" aria-labelledby="h-obs">
-        <h2 id="h-obs">Metan bulutu gözlemleri</h2>
-        <div class="filters">
-          <label>Sektör <select id="f-sector"><option value="">Tümü</option></select></label>
-          <label>Sensör <select id="f-sensor"><option value="">Tümü</option></select></label>
-          <label>Gözlem zamanı
+    <!-- Sol üst: arama, filtreler, okuma notu -->
+    <div class="topleft">
+      <div class="toprow">
+        <div class="search" role="search">
+          <label class="sr-only" for="q">Kayıt veya koordinat ara</label>
+          <svg class="search-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="q" type="search" placeholder="Kayıt veya koordinat ara" autocomplete="off"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="q-results">
+          <div id="q-results" class="q-results" role="listbox" aria-label="Arama sonuçları" hidden></div>
+        </div>
+        <button id="filters-btn" class="chip-btn" type="button" aria-expanded="false" aria-controls="filters">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="lbl">Filtreler</span><span id="f-count" class="count-badge" hidden></span>
+        </button>
+        <button id="info-btn" class="chip-btn ghost" type="button" aria-expanded="false" aria-controls="info-pop" aria-label="Veriyi nasıl okumalıyım?">
+          <span aria-hidden="true" class="q-mark">?</span><span class="lbl">Veriyi nasıl okumalıyım?</span>
+        </button>
+      </div>
+      <div id="chips" class="chips" aria-label="Etkin filtreler"></div>
+
+      <section id="filters" class="panel filters-panel" aria-labelledby="filters-title" hidden>
+        <header class="panel-head">
+          <h2 id="filters-title">Filtreler</h2>
+          <button class="icon-btn" type="button" data-close="filters" aria-label="Filtreleri kapat">×</button>
+        </header>
+        <div class="panel-body">
+          <label class="field">Sektör<select id="f-sector"><option value="">Tümü</option></select></label>
+          <label class="field">Sensör<select id="f-sensor"><option value="">Tümü</option></select></label>
+          <label class="field">Gözlem dönemi
             <select id="f-period">
-              <option value="">Tüm bulut gözlemleri</option>
+              <option value="">Tüm gözlemler</option>
               <option value="30">Son 30 gün</option>
               <option value="90">Son 90 gün</option>
               <option value="365">Son 1 yıl</option>
             </select>
           </label>
-          <label>Sıralama
+          <label class="check"><input type="checkbox" id="f-emission"> Yalnızca emisyon tahmini olanlar</label>
+          <p class="hint">Dönem, sağlayıcının gözlem zamanına uygulanır.</p>
+        </div>
+        <footer class="panel-foot">
+          <button class="btn-secondary" type="button" id="f-clear">Temizle</button>
+          <button class="btn-primary" type="button" id="f-apply">Uygula</button>
+        </footer>
+      </section>
+
+      <section id="info-pop" class="panel info-pop" aria-labelledby="info-title" hidden>
+        <header class="panel-head">
+          <h2 id="info-title">Yüksek bir metan değeri gördüğümde neye bakmalıyım?</h2>
+          <button class="icon-btn" type="button" data-close="info-pop" aria-label="Bilgiyi kapat">×</button>
+        </header>
+        <div class="panel-body">
+          <p>Önce birimi ve gözlem zamanını kontrol et. Haritadaki arka planı, kapsama oranını ve o andaki rüzgârı birlikte incele. Ardından aynı yerin diğer gözlemlerine bak.</p>
+          <p><a class="text-link" href="/yuksek-degerleri-yorumlamak.html">Yüksek değerleri yorumlama rehberini aç</a></p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Sağ: sonuçlar / ayrıntı (telefonda alt panel) -->
+    <section id="results" class="panel results" aria-labelledby="results-title">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <header class="results-head">
+        <div class="results-title">
+          <h2 id="results-title"><span id="r-count">–</span> <span id="r-noun">gözlem</span></h2>
+          <div class="sheet-ctl">
+            <button class="icon-btn" type="button" id="sheet-up" aria-label="Sonuçları genişlet">▴</button>
+            <button class="icon-btn" type="button" id="sheet-down" aria-label="Sonuçları küçült">▾</button>
+          </div>
+          <button class="icon-btn desktop-only" type="button" id="results-close" aria-label="Sonuçlar panelini kapat">×</button>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Sonuç türü">
+          <button role="tab" id="tab-obs" aria-selected="true" aria-controls="cards">Gözlemler <span id="tab-obs-n"></span></button>
+          <button role="tab" id="tab-src" aria-selected="false" aria-controls="cards" tabindex="-1">Kaynak özetleri <span id="tab-src-n"></span></button>
+        </div>
+        <div class="results-tools">
+          <label class="sort"><span class="sr-only">Sıralama</span>
             <select id="f-sort">
               <option value="observed">En yeni gözlem</option>
               <option value="published">En yeni yayımlanan</option>
               <option value="emission">En yüksek emisyon tahmini</option>
             </select>
           </label>
-          <label class="check"><input type="checkbox" id="f-emission"> Yalnızca emisyon tahmini olanlar</label>
+          <button class="btn-secondary small" type="button" id="download">CSV indir</button>
         </div>
-        <p class="summary" id="obs-summary" aria-live="polite">Yükleniyor…</p>
-        <p class="range" id="obs-range"></p>
-        <div class="list-actions">
-          <label class="check"><input type="checkbox" id="show-plumes" checked> Haritada göster</label>
-          <label class="check"><input type="checkbox" id="show-sources"> Kaynak özetleri</label>
-          <button class="btn small" id="download" type="button">CSV indir</button>
-        </div>
-        <ul id="obs-list" class="obs-list"></ul>
-        <button id="obs-more" class="btn small more" type="button" hidden>Daha fazla göster</button>
-        <p class="hint">Nokta: sağlayıcının tespit noktası. Bulut biçimi yakınlaştırınca sağlayıcının artış görüntüsü veya EMIT bulut sınırı olarak görünür. Listede olmayan yer, metan olmadığı anlamına gelmez.</p>
-      </section>
-
-      <details class="block" id="sec-tropomi" open>
-        <summary><h2>Atmosferik metan · TROPOMI XCH₄</h2></summary>
-        <div class="seg" id="mode" role="group" aria-label="Dönem">
-          <button data-mode="day" class="on" aria-pressed="true">Gün</button>
-          <button data-mode="7" aria-pressed="false">7 g</button>
-          <button data-mode="30" aria-pressed="false">30 g</button>
-          <button data-mode="90" aria-pressed="false">90 g</button>
-        </div>
-        <div class="daynav">
-          <button id="prev" aria-label="Önceki gün">‹</button>
-          <div id="daylabel" aria-live="polite">Veri bekleniyor…</div>
-          <button id="next" aria-label="Sonraki gün">›</button>
-        </div>
-        <svg id="spark" viewBox="0 0 300 70" preserveAspectRatio="none" role="img" aria-label="Günlük Türkiye ortalaması ve kapsama"></svg>
-        <p class="hint">Çizgi: günlük Türkiye ortalaması (ppb). Çubuk: o gün geçerli ölçüm içeren kara hücrelerinin oranı (kapsama). Kapsama değişirse ortalama farklı alanları özetler.</p>
-        <label class="check"><input type="checkbox" id="show-tropomi" checked> Haritada göster</label>
-        <div class="seg" id="view" role="group" aria-label="Görünüm">
-          <button data-view="abs" class="on" aria-pressed="true">Mutlak (ppb)</button>
-          <button data-view="anom" aria-pressed="false">Anomali</button>
-        </div>
-        <div id="legend"><div id="legend-bar"></div><div id="legend-ticks"><span id="lg-min"></span><span id="lg-mid"></span><span id="lg-max"></span></div></div>
-        <dl id="stats">
-          <div><dt>Ortalama</dt><dd id="st-mean">–</dd></div>
-          <div><dt>En yüksek</dt><dd id="st-max">–</dd></div>
-          <div><dt>Kapsama</dt><dd id="st-cov">–</dd></div>
-        </dl>
-        <p class="hint" id="tropomi-meta"></p>
-      </details>
-
-      <details class="block" id="sec-events">
-        <summary><h2>İzleme bildirimleri <span id="events-count" class="count"></span></h2></summary>
-        <ul id="events" class="events"><li class="muted">Yükleniyor…</li></ul>
-      </details>
-
-      <details class="block" id="sec-passes">
-        <summary><h2>Olası gözlem fırsatları</h2></summary>
-        <p class="hint">Yörünge hesabıdır. Gündüz geçişi ışık koşulu uygun bir gözlem fırsatıdır; hedefleme ve kullanılabilir veri oluşması ayrıca doğrulanır.</p>
-        <ul id="passes" class="passes"><li class="muted">Hesaplanıyor…</li></ul>
-        <label class="check"><input type="checkbox" id="show-sats" checked> Uyduların anlık konumu (yer kapsamı değildir)</label>
-      </details>
-
-      <details class="block" id="sec-sources">
-        <summary><h2>Veri durumu</h2></summary>
-        <ul id="sources" class="sources"><li class="muted">Yükleniyor…</li></ul>
-      </details>
-
-      <footer class="attrib">
-        <p>Veri: <a href="https://disc.gsfc.nasa.gov/datasets/S5P_L2__CH4____HiR_2/summary" target="_blank" rel="noopener">Sentinel-5P TROPOMI CH₄</a> (ESA/Copernicus, NASA GES DISC) ·
-          <a href="https://data.carbonmapper.org/" target="_blank" rel="noopener">Carbon Mapper</a> (ticari olmayan kullanım, kaynak gösterimi) ·
-          <a href="https://lpdaac.usgs.gov/products/emitl2bch4plmv002/" target="_blank" rel="noopener">NASA EMIT</a> (LP DAAC) ·
-          Meteoroloji: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0), ERA5 (Copernicus) · Yörüngeler: CelesTrak.</p>
-        <p class="muted" id="status"></p>
-      </footer>
-    </aside>
-
-    <section id="mapwrap" class="mapwrap" aria-label="Harita">
-      <div id="map" role="region" aria-label="Metan haritası"></div>
-      <details class="info-card" id="info-card">
-        <summary>
-          <span class="ic-icon" aria-hidden="true">i</span>
-          <span class="ic-copy"><b>Yüksek bir metan değeri gördüğümde neye bakmalıyım?</b></span>
-          <span class="ic-chev" aria-hidden="true">⌄</span>
-        </summary>
-        <div class="ic-body">
-          <p>Önce birimi ve gözlem zamanını kontrol et. Haritadaki arka planı, kapsama oranını ve o andaki rüzgârı birlikte incele. Ardından aynı yerin diğer gözlemlerine bak.</p>
-          <p class="ic-links"><a href="/yuksek-degerleri-yorumlamak.html">Yüksek değerleri yorumlama rehberini aç</a></p>
-        </div>
-      </details>
+        <p class="range" id="r-range"></p>
+      </header>
+      <div id="cards" class="cards" role="list" tabindex="-1" aria-busy="true"></div>
     </section>
 
-    <aside id="detail" class="drawer" aria-labelledby="detail-title" hidden>
-      <header class="drawer-head">
-        <div>
-          <p class="eyebrow" id="detail-kind">Metan bulutu</p>
-          <h2 id="detail-title" tabindex="-1"></h2>
-          <p class="muted" id="detail-sub"></p>
-        </div>
-        <button id="detail-close" class="icon-btn" type="button" aria-label="Ayrıntıyı kapat">×</button>
+    <section id="detail" class="panel detail" aria-labelledby="detail-title" hidden>
+      <header class="detail-head">
+        <button class="btn-text" type="button" id="detail-back">← Sonuçlara dön</button>
+        <button class="icon-btn" type="button" id="detail-close" aria-label="Ayrıntıyı kapat">×</button>
       </header>
-      <div id="detail-body"></div>
-    </aside>
-  </div>
+      <div class="detail-scroll" id="detail-body"></div>
+    </section>
+
+    <button id="results-open" class="results-fab" type="button" hidden>Sonuçlar <span id="fab-count"></span></button>
+
+    <!-- Sol alt: harita araçları ve lejant -->
+    <div class="tools" role="toolbar" aria-label="Harita araçları">
+      <button class="tool" type="button" id="zoom-in" aria-label="Yakınlaştır" title="Yakınlaştır">+</button>
+      <button class="tool" type="button" id="zoom-out" aria-label="Uzaklaştır" title="Uzaklaştır">−</button>
+      <button class="tool" type="button" id="home" aria-label="Türkiye görünümüne dön" title="Türkiye görünümüne dön">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
+      <button class="tool" type="button" id="layers-btn" aria-label="Katmanlar" title="Katmanlar" aria-expanded="false" aria-controls="layers">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 9 5-9 5-9-5zM3 14l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
+      <button class="tool" type="button" id="status-btn" aria-label="Bildirimler ve veri durumu" title="Bildirimler ve veri durumu" aria-expanded="false" aria-controls="status-panel">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <span id="events-dot" class="dot" hidden></span></button>
+    </div>
+
+    <div id="legend" class="legend" aria-label="Lejant">
+      <div id="legend-obs" class="lg-block">
+        <span class="lg-item"><i class="sw pt"></i>Emisyon tahmini var</span>
+        <span class="lg-item"><i class="sw pt none"></i>Tahmin yok</span>
+        <span class="lg-item"><i class="sw cl">12</i>Gözlem sayısı (küme)</span>
+      </div>
+      <div id="legend-src" class="lg-block" hidden>
+        <span class="lg-item"><i class="sw src"></i>Kaynak özeti (sağlayıcı kümesi)</span>
+      </div>
+      <div id="legend-tropomi" class="lg-block" hidden>
+        <span class="lg-title">TROPOMI XCH₄ <span id="lg-mode"></span></span>
+        <div id="legend-bar"></div>
+        <div class="lg-ticks"><span id="lg-min"></span><span id="lg-mid"></span><span id="lg-max"></span></div>
+      </div>
+    </div>
+
+    <section id="layers" class="panel layers-panel" aria-labelledby="layers-title" hidden>
+      <header class="panel-head">
+        <h2 id="layers-title">Katmanlar</h2>
+        <button class="icon-btn" type="button" data-close="layers" aria-label="Katmanları kapat">×</button>
+      </header>
+      <div class="panel-body">
+        <fieldset class="seg-field"><legend>Temel harita</legend>
+          <div class="seg" id="basemap" role="group">
+            <button data-base="light" class="on" aria-pressed="true">Açık</button>
+            <button data-base="dark" aria-pressed="false">Koyu</button>
+          </div>
+        </fieldset>
+        <label class="check"><input type="checkbox" id="show-plumes" checked> Gözlem noktaları ve bulut görüntüleri</label>
+        <label class="check"><input type="checkbox" id="show-sats"> Uydu konumları (yalnızca Türkiye üzerindeyken)</label>
+        <div class="layer-group">
+          <label class="check strong"><input type="checkbox" id="show-tropomi"> Bölgesel metan · TROPOMI XCH₄</label>
+          <div id="tropomi-controls" hidden>
+            <label class="field">Saydamlık <input type="range" id="t-opacity" min="10" max="90" step="5" value="55" aria-describedby="t-op-val"> <span id="t-op-val">%45 saydam</span></label>
+            <div class="seg" id="mode" role="group" aria-label="Dönem">
+              <button data-mode="day" class="on" aria-pressed="true">Gün</button>
+              <button data-mode="7" aria-pressed="false">7 g</button>
+              <button data-mode="30" aria-pressed="false">30 g</button>
+              <button data-mode="90" aria-pressed="false">90 g</button>
+            </div>
+            <div class="daynav">
+              <button id="prev" aria-label="Önceki gün">‹</button>
+              <div id="daylabel" aria-live="polite">Veri bekleniyor…</div>
+              <button id="next" aria-label="Sonraki gün">›</button>
+            </div>
+            <svg id="spark" viewBox="0 0 300 70" preserveAspectRatio="none" role="img" aria-label="Günlük Türkiye ortalaması ve kapsama"></svg>
+            <p class="hint">Çizgi: günlük Türkiye ortalaması (ppb). Çubuk: o gün ölçülen kara hücrelerinin oranı (kapsama).</p>
+            <div class="seg" id="view" role="group" aria-label="Görünüm">
+              <button data-view="abs" class="on" aria-pressed="true">Mutlak (ppb)</button>
+              <button data-view="anom" aria-pressed="false">Anomali</button>
+            </div>
+            <dl id="stats">
+              <div><dt>Ortalama</dt><dd id="st-mean">–</dd></div>
+              <div><dt>En yüksek</dt><dd id="st-max">–</dd></div>
+              <div><dt>Kapsama</dt><dd id="st-cov">–</dd></div>
+            </dl>
+            <details class="tech"><summary>Ürün ve yöntem</summary><p class="hint" id="tropomi-meta"></p></details>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="status-panel" class="panel status-panel" aria-labelledby="status-title" hidden>
+      <header class="panel-head">
+        <h2 id="status-title">Bildirimler ve veri durumu</h2>
+        <button class="icon-btn" type="button" data-close="status-panel" aria-label="Kapat">×</button>
+      </header>
+      <div class="tabs small" role="tablist" aria-label="Durum görünümü">
+        <button role="tab" id="st-tab-events" aria-selected="true" aria-controls="st-events">Bildirimler <span id="events-count"></span></button>
+        <button role="tab" id="st-tab-passes" aria-selected="false" aria-controls="st-passes" tabindex="-1">Gözlem fırsatları</button>
+        <button role="tab" id="st-tab-sources" aria-selected="false" aria-controls="st-sources" tabindex="-1">Veri durumu</button>
+      </div>
+      <div class="panel-body scroll">
+        <ul id="st-events" class="events"><li class="muted">Yükleniyor…</li></ul>
+        <div id="st-passes" hidden>
+          <p class="hint">Yörünge hesabıdır. Gündüz geçişi ışık koşulu uygun bir gözlem fırsatıdır; hedefleme ve kullanılabilir veri oluşması ayrıca doğrulanır.</p>
+          <ul id="passes" class="passes"><li class="muted">Hesaplanıyor…</li></ul>
+        </div>
+        <div id="st-sources" hidden>
+          <ul id="sources" class="sources"><li class="muted">Yükleniyor…</li></ul>
+          <p class="hint" id="status"></p>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="/assets/site.js?v=2026-11-01-general-3"></script>
-  <script src="/assets/format.js?v=2026-11-01-general-3"></script>
-  <script src="/assets/charts.js?v=2026-11-01-general-3"></script>
-  <script src="/assets/map.js?v=2026-11-01-general-3"></script>
+  <script src="/assets/site.js?v=2026-11-01-map-4"></script>
+  <script src="/assets/format.js?v=2026-11-01-map-4"></script>
+  <script src="/assets/geo.js?v=2026-11-01-map-4"></script>
+  <script src="/assets/map.js?v=2026-11-01-map-4"></script>
 </body>
 </html>
