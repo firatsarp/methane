@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Karşılaştırma | Türkiye Metan İzleyici</title>
+  <meta name="description" content="İki metan gözleminin yan yana, tek bulutla ve sunucu tarafı karşılaştırılabilirlik kararıyla incelenmesi.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ed7953'/%3E%3Ctext x='16' y='21' font-size='13' text-anchor='middle' fill='%23111' font-family='sans-serif' font-weight='700'%3ECH4%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="/assets/site.css?v=2026-11-01-general-3">
+  <link rel="stylesheet" href="/assets/datapage.css?v=2026-11-02-sci-1">
+</head>
+<body class="datapage">
+  <a class="skip" href="#main">İçeriğe geç</a>
+  <header class="topbar">
+    <a class="brand" href="/" data-map-link><i aria-hidden="true"></i><span>Türkiye Metan İzleyici<small>Veriyi görmek. Ölçümü anlamak.</small></span></a>
+    <nav id="site-menu" class="site-menu" aria-label="Ana gezinme"><a href="/" data-map-link>Harita</a><a href="/yuksek-olay-arsivi.html">Yüksek Olay Arşivi</a><a href="/karsilastirma.html" aria-current="page">Karşılaştırma</a><a href="/yuksek-degerleri-yorumlamak.html">Yüksek Değerler</a><a href="/veriyi-anlamak.html">Veriyi Anlamak</a><a href="/uydular-nasil-olcer.html">Uydular Nasıl Ölçer?</a><a href="/hava-ve-iklim.html">Hava ve İklim</a><a href="/kaynaklar.html">Kaynaklar</a></nav>
+    <details class="mobile-menu"><summary>Menü</summary><nav class="mobile-links" aria-label="Mobil gezinme"><a href="/" data-map-link>Harita</a><a href="/yuksek-olay-arsivi.html">Yüksek Olay Arşivi</a><a href="/karsilastirma.html" aria-current="page">Karşılaştırma</a><a href="/yuksek-degerleri-yorumlamak.html">Yüksek Değerler</a><a href="/veriyi-anlamak.html">Veriyi Anlamak</a><a href="/uydular-nasil-olcer.html">Uydular Nasıl Ölçer?</a><a href="/hava-ve-iklim.html">Hava ve İklim</a><a href="/kaynaklar.html">Kaynaklar</a></nav></details>
+  </header>
+
+  <main id="main">
+    <div class="wrap">
+      <a class="backlink" href="/" data-map-link>← Haritaya dön</a>
+      <header class="hero">
+        <p class="eyebrow">İki gözlem</p>
+        <h1>Karşılaştırma</h1>
+        <p class="lead">İki gözlem yan yana; her görünümde yalnızca seçilen tek bulut. Sayısal fark yalnızca aynı nicelik ve uygun seride hesaplanır; karar sunucuda verilir ve gerekçesiyle gösterilir.</p>
+      </header>
+      <section class="card" aria-labelledby="pick-title">
+        <h2 id="pick-title">Gözlem seçimi</h2>
+        <div class="pick-row">
+          <label class="field"><span>A gözlemi</span><select id="sel-a"></select></label>
+          <label class="field"><span>B gözlemi (A ile aynı yer veya kaynak)</span><select id="sel-b"></select></label>
+        </div>
+        <label class="hint"><input type="checkbox" id="sync" checked> Kadrajı eşle (renk ölçekleri ortak değildir)</label>
+      </section>
+      <section id="decision" class="card" aria-live="polite"><div class="status-box">İki gözlem seçin.</div></section>
+      <div class="cmp-grid">
+        <section class="cmp-col" aria-labelledby="ta"><h2 id="ta">A</h2><div id="map-a" class="cmp-map" role="region" aria-label="A gözlemi haritası"></div><p id="leg-a" class="hint"></p><div id="info-a"></div></section>
+        <section class="cmp-col" aria-labelledby="tb"><h2 id="tb">B</h2><div id="map-b" class="cmp-map" role="region" aria-label="B gözlemi haritası"></div><p id="leg-b" class="hint"></p><div id="info-b"></div></section>
+      </div>
+    </div>
+  </main>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="/assets/site.js?v=2026-11-02-sci-1"></script>
+  <script src="/assets/format.js?v=2026-11-02-sci-1"></script>
+  <script src="/assets/geo.js?v=2026-11-02-sci-1"></script>
+  <script src="/assets/plume-layer.js?v=2026-11-02-sci-1"></script>
+  <script src="/assets/compare-page.js?v=2026-11-02-sci-1"></script>
+</body>
+</html>

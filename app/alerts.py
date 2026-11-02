@@ -12,7 +12,8 @@ from .config import (ALERT_WINDOW_DAYS, CARBON_MAPPER_API_TOKEN, INGEST_INTERVAL
 from .geo import turkey_cell_mask
 
 # Son başarılı almadan bu kadar saat geçerse "güncel değil" uyarısı (zamanlama aralığının yaklaşık iki katı)
-STALE_HOURS = {"carbonmapper": 50, "tropomi": max(6, 3 * INGEST_INTERVAL_MIN / 60), "celestrak": 36, "emit": 50}
+STALE_HOURS = {"carbonmapper": 50, "tropomi": max(6, 3 * INGEST_INTERVAL_MIN / 60), "celestrak": 36, "emit": 50,
+               "pipeline": 50, "cams_hotspots": 50}
 # Gözlem ile ilk alınma arasında bundan uzun süre varsa "geçmiş gözlem yeni yayımlandı" olarak sunulur
 PAST_OBSERVATION_DAYS = 30
 
@@ -50,6 +51,14 @@ SOURCES = [
     {"id": "cdse", "name": "Copernicus Data Space — Sentinel-2 L2A yüzey görüntüsü",
      "schedule": "İstek üzerine, kalıcı önbellek", "connected": True,
      "credentials": ("CDSE_CLIENT_ID+CDSE_CLIENT_SECRET",)},
+    {"id": "mars", "name": "UNEP IMEO MARS yayımlanmış bulutları (CSV, CC BY-NC-SA 4.0)",
+     "schedule": "Günlük iş hattı, koşullu indirme", "connected": True, "credentials": ()},
+    {"id": "cams_hotspots", "name": "CAMS TROPOMI metan sıcak noktaları (CSV, haftalık yayın)",
+     "schedule": "Günlük iş hattı", "connected": True, "credentials": ()},
+    {"id": "pipeline", "name": "Günlük iş hattı (sınıflandırma, arşiv, yorum)",
+     "schedule": "Her gün 03:30 TSİ", "connected": True, "observations": False, "credentials": ()},
+    {"id": "retention", "name": "90 gün saklama ve arşiv bütünlüğü",
+     "schedule": "Günlük iş hattının son adımı", "connected": True, "observations": False, "credentials": ()},
 ]
 
 
@@ -231,10 +240,31 @@ def _source_events(now):
     return out
 
 
+def _peak_events(now):
+    """Son pencere içinde kalıcı arşive giren yüksek kayıtlar. İlk geri doldurma (backfill) bildirim üretmez.
+    Sınıf: inceleme adayı (robust/mutlak kural) veya yeni yayımlanan yüksek gözlem (seri içi en yüksekler)."""
+    import json
+    since = (now - timedelta(days=ALERT_WINDOW_DAYS)).isoformat()
+    with db.read() as con:
+        rows = con.execute("SELECT id, state, reasons, value, unit, observed, created_at, bundle FROM peak_events "
+                           "WHERE active = 1 AND tr = 1 AND created_at >= ?", (since,)).fetchall()
+    out = []
+    for pid, state, reasons, value, unit, observed, created, bundle in rows:
+        sel = (json.loads(bundle).get("selection") or {})
+        if sel.get("backfill"):
+            continue
+        out.append({"kind": "review_candidate" if state in ("peak_candidate", "reviewed_peak") else "high_observation_published",
+                    "level": "review" if state == "peak_candidate" else "info", "plumeId": pid, "state": state,
+                    "value": value, "unit": unit, "observedAt": observed, "archivedAt": created,
+                    "reasons": json.loads(reasons),
+                    "rule": "Kayıt kalıcı yüksek olay arşivine girdi; aday bulgu doğrulanmış yüksek salım değildir."})
+    return out
+
+
 def events():
     now = datetime.now(timezone.utc)
     items, srcs = catalog.load("tr")
-    out = _source_events(now) + _plume_events(now, items, srcs) + _version_events(now)
+    out = _source_events(now) + _plume_events(now, items, srcs) + _version_events(now) + _peak_events(now)
     try:
         out += regional_candidates(now)
     except Exception as e:  # kural hesaplanamazsa diğer olaylar yine döner; neden ayrıca raporlanır

@@ -86,12 +86,32 @@ Ardından http://localhost:8000 (compose dosyasında yerelde `ports: ["8000:8000
 | `GET /api/imagery/{id}` | Sentinel-2 L2A yüzey görüntüsü durumu / PNG (CDSE tanımlıysa) |
 | `GET /api/data-status` | Sır içermeyen kaynak durumları ve iş kuyruğu sayıları |
 | `GET /api/monitoring-events` | Açıklanabilir izleme olayları: yeni gözlem, geçmiş gözlem yeni yayımlandı, tekrarlanan tespit, kayıt güncellendi, TROPOMI bölgesel artış adayı (kural gösterilir), veri güncellenemedi |
+| `GET /api/observations/{id}/analysis` | Sürümlü kural motoru yorumu (gözlenen sonuç → geçmiş → diğer sensörler → meteoroloji → belirlenemeyenler → sonraki gözlem) |
+| `GET /api/observations/{id}/comparisons` | Karşılaştırma adayları ve her biri için sunucu kararı (havuz: kalıcı arşiv + son 90 gün) |
+| `GET /api/comparisons?a=&b=` | İki gözlem: `near_time_independent` / `historical_change` / `context_only`, gerekçe ve reddedilen sayısal karşılaştırma kodu |
+| `GET /api/peaks[?state=]` | Kalıcı yüksek olay arşivi (seçim gerekçesi, dosya arşiv durumu, revizyon sayısı) |
+| `GET /api/archive/assets/{sha256}` | Arşivlenmiş dosya (sha256 ile doğrulanmış) |
+| `GET /api/sources/{id}/history` | Kaynak ilişkisine bağlı gözlem serileri (sensör/yöntem sürümüne göre ayrı) |
+| `GET /api/retention` | 90 gün penceresi, arşiv sayıları, son günlük iş hattı raporları |
+| `GET /api/capabilities`, `GET /api/source-setup` | Kaynak yetenek envanteri, yöntem kaydı (ön koşullarıyla), hesap aileleri hazır mı (değer basılmaz) |
+| `POST /api/admin/peaks/{id}/review`, `POST /api/admin/pipeline/run`, `GET /api/admin/imports` | `X-Admin-Token` başlığı ile; `ADMIN_TOKEN` tanımsızsa kapalı |
+
+## Günlük iş hattı, 90 gün saklama ve kalıcı arşiv
+
+Her gün 03:30 TSİ (ve açılışta bir kez): Carbon Mapper, NASA EMIT, UNEP MARS ve CAMS alınır → aynı çekim tekilleştirilir
+(`app/acquisition.py`) → seri içi pik sınıflandırması (`app/peaks.py`) → yüksek olaylar için gözlem anı ERA5, sayısal raster
+morfolojisi ve yorum → kalıcı paket (`app/archive.py`) → 90 gün temizliği (`app/retention.py`). Kurallar ve eşikler
+`app/policy/scientific-rules.json` dosyasında sürümlüdür; kaynak envanteri `app/policy/data-sources.json`, kaynakça
+`app/policy/references.json`. Normal gözlemler gözlem zamanına göre 90 gün tutulur; kalıcı arşivdeki olaylar ve dosyaları silinmez.
+Yetkili/lisanslı EnMAP, PRISMA, Landsat dosyaları `DATA_DIR/import/<kaynak>/` altına konursa kaydedilir ve seviyesi denetlenir;
+doğrulanmış sensöre özgü tarif olmadan metan çıkarımı yapılmaz.
 
 ## Sayfalar ve içerik
 
 Her sayfada aynı üst menü bulunur (telefonda JavaScript gerektirmeyen Menü): `/` (harita),
 `/yuksek-degerleri-yorumlamak.html`, `/veriyi-anlamak.html`, `/uydular-nasil-olcer.html`,
-`/hava-ve-iklim.html` (gerçek veriyle meteoroloji ve iklim; açıklama metni veri sekmelerinin altında), `/kaynaklar.html`.
+`/hava-ve-iklim.html` (gerçek veriyle meteoroloji ve iklim; açıklama metni veri sekmelerinin altında), `/kaynaklar.html`,
+`/yuksek-olay-arsivi.html` (kalıcı arşiv) ve `/karsilastirma.html` (iki gözlem, her görünümde tek bulut).
 Eski `/seymen.html` adresi 308 ile `/yuksek-degerleri-yorumlamak.html` adresine yönlenir.
 
 Metinlerin tek kaynağı `static/content/metan-icerik.2026-11-01-general-3.json` dosyasıdır (şema 3.0.0). Okuma sayfaları bu
@@ -100,7 +120,7 @@ JSON'dan hazırlanmış statik HTML'dir; JavaScript kapalıyken de okunur, kayna
 birlikte güncellenmelidir. Harita detayındaki kavram açıklamaları aynı JSON'un `glossary` alanından okunur.
 HTML/JS/CSS/JSON yanıtları `Cache-Control: no-cache` ile her açılışta yeniden doğrulanır.
 
-Testler: `python -m unittest discover -s tests` ve `node --test tests/content.test.js tests/geo.test.js`.
+Testler: `python -m unittest discover -s tests` ve `node --test tests/content.test.js tests/geo.test.js tests/plume-layer.test.js`.
 
 ## Erişimler (yalnızca sunucu ortam değişkenleri)
 
@@ -109,7 +129,9 @@ Testler: `python -m unittest discover -s tests` ve `node --test tests/content.te
 | `EARTHDATA_TOKEN` veya `EARTHDATA_USERNAME` + `EARTHDATA_PASSWORD` | TROPOMI ve NASA EMIT (LP DAAC). Token boşsa kullanıcı adı/parola kullanılır |
 | `CARBON_MAPPER_API_TOKEN` | İsteğe bağlı; reddedilirse herkese açık katalogla devam edilir |
 | `CDSAPI_URL`, `CDSAPI_KEY` | Copernicus CDS ERA5 iş kuyruğu (gözlem anı). Hesapta "ERA5 hourly data on single levels" lisansı kabul edilmiş olmalı; edilmemişse iş `terms` tanısıyla durur |
-| `CDSE_CLIENT_ID`, `CDSE_CLIENT_SECRET` | Copernicus Data Space Sentinel-2 L2A yüzey görüntüsü (Catalog/Process v1) |
+| `CDSE_CLIENT_ID`, `CDSE_CLIENT_SECRET` | Copernicus Data Space Sentinel-2 L2A yüzey görüntüsü (Catalog/Process v1). Kimlik 6 saatte bir sınanır; geçerliyse yalnızca kimlik hatasıyla engellenmiş görüntü işleri yeniden kuyruğa alınır. Kaynak, gerçek sahne alınana kadar "sağlıklı" sayılmaz |
+| `ADMIN_TOKEN` | İsteğe bağlı; yönetici uçlarını açar |
+| `PEAK_ABSOLUTE_KGH` | İsteğe bağlı mutlak kg/sa aday eşiği; varsayılan yok |
 
 Open-Meteo anahtarsız, ticari olmayan kullanım koşullarıyla kullanılır; atıf veri kartlarında gösterilir.
 Tanımlı bir erişim yalnızca "hazır" sayılır; gerçek bir istek başarıyla sonuçlanınca `/api/data-status` içinde `healthy: true` olur.
@@ -120,6 +142,8 @@ Tanımlı bir erişim yalnızca "hazır" sayılır; gerçek bir istek başarıyl
 - "Anomali" görünümü her hücrenin o anki Türkiye medyanından farkını gösterir. Yüksek rakımlı bölgelerde
   (Doğu Anadolu) mutlak değerler sistematik olarak farklı olabilir; tekil sızıntı tespiti için bulut (plume) katmanı daha uygundur.
 - Bulut verisi Carbon Mapper'ın [kullanım koşullarına](https://carbonmapper.org/terms) tabidir: yalnızca ticari olmayan
-  kullanım ve kaynak gösterimi zorunlu. Görüntü bağlantıları imzalı ve süreli olduğu için katalog günde bir yenilenir;
-  görüntüler sunucuya indirilmez, tarayıcı doğrudan Carbon Mapper'dan yükler.
+  kullanım ve kaynak gösterimi zorunlu. Görüntü bağlantıları imzalı ve süreli olduğu için katalog günde bir yenilenir.
+  Haritada yalnızca seçilen gözlemin görüntüsü tarayıcıya yüklenir. Kalıcı arşive giren olayların sayısal GeoTIFF ve PNG
+  dosyaları bu koşullar çerçevesinde sunucuda sha256 ile saklanır.
+- UNEP MARS verisi CC BY-NC-SA 4.0 (UNEP IMEO atfı) ile kullanılır.
 - Sentinel-5P bir ESA/Copernicus uydusudur; veriyi NASA GES DISC arşivinden alıyoruz.

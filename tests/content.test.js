@@ -14,7 +14,7 @@ const decode = (s) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/
 const PAGES = { highValues: "yuksek-degerleri-yorumlamak.html", insights: "veriyi-anlamak.html",
   science: "uydular-nasil-olcer.html", weatherClimate: "hava-ve-iklim.html" };
 const ALL = ["index.html", "yuksek-degerleri-yorumlamak.html", "veriyi-anlamak.html", "uydular-nasil-olcer.html",
-  "hava-ve-iklim.html", "kaynaklar.html"];
+  "hava-ve-iklim.html", "kaynaklar.html", "yuksek-olay-arsivi.html", "karsilastirma.html"];
 
 test("content version and section counts", () => {
   assert.equal(json.schemaVersion, "3.0.0");
@@ -70,8 +70,9 @@ test("reading pages end with a closed Kaynaklar list of real links", () => {
   for (const r of json.references.filter((x) => x.url)) assert.ok(refs.includes(r.title), `kaynaklar: ${r.id}`);
 });
 
-test("same six-item visible navigation everywhere, with way back to the map", () => {
-  const labels = ["Harita", "Yüksek Değerler", "Veriyi Anlamak", "Uydular Nasıl Ölçer?", "Hava ve İklim", "Kaynaklar"];
+test("same visible navigation everywhere (archive and comparison reachable), with way back to the map", () => {
+  const labels = ["Harita", "Yüksek Olay Arşivi", "Karşılaştırma", "Yüksek Değerler", "Veriyi Anlamak", "Uydular Nasıl Ölçer?",
+    "Hava ve İklim", "Kaynaklar"];
   for (const file of ALL) {
     const html = read(file);
     for (const cls of ['id="site-menu"', 'class="mobile-links"']) {

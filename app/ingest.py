@@ -249,24 +249,32 @@ def _record_versions(obs_list, now):
                         rows)
 
 
-def ingest_plumes():
+def ingest_plumes(protected=None):
     """Carbon Mapper bulut kataloğu (Tanager + EMIT). Görüntü bağlantıları imzalı ve süreli olduğu,
-    Carbon Mapper bulutları geri çekip güncelleyebildiği için tablo her çalışmada baştan yazılır."""
+    Carbon Mapper bulutları geri çekip güncelleyebildiği için tablo her çalışmada baştan yazılır.
+
+    Saklama: tam katalog yalnızca bellekte (geçici işleme alanı) pik sınıflandırması için döndürülür; kalıcı
+    tabloya 90 günlük pencere + kalıcı arşivde korunan kayıtlar yazılır. Böylece silinen eski normal kayıtlar
+    her gün geri dolmaz. Dönüş: tüm kayıtların (id, png, bounds, obs_json, tr) satırları ya da hata durumunda None."""
+    from . import retention
     try:
         raw, token_state = _fetch_carbonmapper()
     except Exception as e:
         log.exception("Carbon Mapper kataloğu alınamadı")
         db.set_meta("last_error", f"{_now().isoformat()} carbonmapper: {e}")
         sources.failed("carbonmapper", e)
-        return
+        return None
 
     now = _now().isoformat()
+    protected = retention.protected_ids() if protected is None else protected
     pairs = [(p, observations.normalize_cm_plume(p)) for p in raw]
     invalid = sum(1 for _, o in pairs if o is None)
     pairs = [(p, o) for p, o in pairs if o is not None]
     raw_of = {id(o): p for p, o in pairs}
     unique, dropped = observations.dedupe([o for _, o in pairs])
     pairs = [(raw_of[id(o)], o) for o in unique]
+    all_rows = [_plume_row(p, o) for p, o in pairs]
+    pairs = [(p, o) for p, o in pairs if retention.keep_on_ingest(o, protected)]
 
     seen = _first_seen([o["id"] for _, o in pairs], now)
     for _, o in pairs:
@@ -284,11 +292,23 @@ def ingest_plumes():
             "SELECT MAX(json_extract(obs, '$.observedAt')), MAX(json_extract(obs, '$.publishedAt')) "
             "FROM cm_plumes WHERE tr = 1").fetchone()
     db.set_meta("plumes_finished", _now().isoformat())
-    sources.succeeded("carbonmapper", token=token_state, records=len(rows), duplicates=dropped,
-                      invalid=invalid, last_observation=last_obs, last_published=last_pub)
-    log.info("Carbon Mapper: %d bulut (%d tekrar, %d geçersiz kayıt atıldı; token: %s)",
-             len(rows), dropped, invalid, token_state)
+    sources.succeeded("carbonmapper", token=token_state, records=len(all_rows), stored=len(rows), duplicates=dropped,
+                      invalid=invalid, last_observation=last_obs, last_published=last_pub, last_product_at=now)
+    log.info("Carbon Mapper: %d bulut alındı, %d saklandı (%d tekrar, %d geçersiz; token: %s)",
+             len(all_rows), len(rows), dropped, invalid, token_state)
     ingest_cm_sources()
+    # _plume_row: (id, observed, lat, lon, tr, emission, unc, sector, platform, wind, png, bounds, obs)
+    return all_rows
+
+
+def persist_protected_cm(rows, protected):
+    """Aynı turda kalıcı arşive giren eski kayıtları tabloya ekler (sonraki turların seri hesabı eksik kalmasın)."""
+    keep = [r for r in rows or [] if r[0] in protected]
+    with db.tx() as con:
+        con.executemany(
+            """INSERT OR IGNORE INTO cm_plumes(id, observed, lat, lon, tr, emission, uncertainty,
+               sector, platform, wind_speed, png, bounds, obs) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""", keep)
+    return len(keep)
 
 
 def ingest_cm_sources():

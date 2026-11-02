@@ -8,7 +8,7 @@ katalog katmanında tek gözlem olarak birleştirilir.
 import json
 import logging
 
-from . import db, net, observations, sources, store
+from . import acquisition, db, net, observations, quantities, retention, sources, store
 from .config import BBOX
 from .geo import in_turkey
 
@@ -18,6 +18,8 @@ CMR = "https://cmr.earthdata.nasa.gov/search"
 SHORT_NAME = "EMITL2BCH4PLM"
 PROVIDER = "NASA LP DAAC"
 SENSOR = "NASA EMIT (ISS)"
+# Son turda indirilen tam satırlar: pipeline sınıflandırmadan sonra korunanları tabloya ekler (persist_protected)
+_pending = []
 
 
 def latest_collection():
@@ -111,11 +113,37 @@ def normalize(meta_feature, umm, concept_id, granule_concept_id, version, urls, 
         "imageUrl": urls.get("png"),
         "thumbnail": {"url": urls["png"], "kind": "NASA EMIT bulut kompleksi görüntüsü"} if urls.get("png") else None,
         "validObservationConfirmed": False,
+        "acquisitionId": acquisition.from_emit_scenes(p.get("DAAC Scene Names")),
+        "methodVersion": f"nasa-emit:{SHORT_NAME}:v{version}",
+        # Belirsizliğin istatistiksel tanımı PLMMETA alanında yazmıyor; sigma sayılmaz
+        "measurement": quantities.measurement(quantities.EMISSION_RATE, value, "kg/h", uncertainty=unc,
+                                              uncertainty_kind=quantities.UNSPECIFIED) if value is not None else None,
+        "numericRaster": {"url": urls.get("tif"), "product": "EMIT L2B CH4PLM GeoTIFF (Earthdata yetkisi gerekir)",
+                          "unitInFile": None} if urls.get("tif") else None,
     }
 
 
-def ingest():
-    """CMR'deki tüm Türkiye kutusu granüllerini idempotent alır: yeni granüllerin metadata'sı indirilir."""
+def _checkpoints():
+    """İşlenmiş granüller {GranuleUR: CMR revizyonu}. İlk sürümden geçişte emit_plumes'taki granüller tohumlanır."""
+    with db.tx() as con:
+        if not con.execute("SELECT 1 FROM ingest_checkpoints WHERE source = 'emit' LIMIT 1").fetchone():
+            now = store.iso(store.now())
+            con.executemany("INSERT OR IGNORE INTO ingest_checkpoints(source, item_id, revision, processed_at) "
+                            "VALUES('emit', ?, NULL, ?)",
+                            [(r[0], now) for r in con.execute(
+                                "SELECT DISTINCT json_extract(obs, '$.granule') FROM emit_plumes") if r[0]])
+        return dict(con.execute("SELECT item_id, revision FROM ingest_checkpoints WHERE source = 'emit'").fetchall())
+
+
+def stored_rows():
+    with db.read() as con:
+        return con.execute("SELECT id, footprint, obs, tr FROM emit_plumes").fetchall()
+
+
+def ingest(protected=None):
+    """CMR'deki tüm Türkiye kutusu granüllerini artımlı alır: yeni veya revizyonu değişmiş granüllerin metadata'sı
+    indirilir. Kalıcı tabloya 90 gün penceresi + korunan kayıtlar yazılır. Dönüş: bu turda indirilen tüm kayıtlar +
+    saklanan kayıtlar [(id, footprint, obs_json, tr)] ya da hata durumunda None."""
     from . import ingest as tropomi_ingest  # Earthdata girişi orada
     try:
         concept_id, version = latest_collection()
@@ -123,15 +151,20 @@ def ingest():
     except net.ProviderError as e:
         log.warning("EMIT kataloğu alınamadı: %s", e.kind)
         sources.failed("emit", e)
-        return
-    with db.read() as con:
-        done = {r[0] for r in con.execute("SELECT json_extract(obs, '$.granule') FROM emit_plumes")}
+        return None
+    protected = retention.protected_ids() if protected is None else protected
+    done = _checkpoints()
     # İlk doldurma entegrasyonun başlangıcıdır; bu kayıtlar "yeni alındı" bildirimi üretmez
     baseline = int(not done)
-    todo = [g for g in granules if g["umm"].get("GranuleUR") not in done]
+
+    def stale(g):
+        gid, rev = g["umm"].get("GranuleUR"), str(g["meta"].get("revision-id") or "")
+        return gid not in done or (done[gid] is not None and rev and done[gid] != rev)
+    todo = [g for g in granules if stale(g)]
+    fetched = []
     if todo and not tropomi_ingest.login():
         sources.failed("emit", net.ProviderError("auth", "Earthdata kimlik bilgisi yok veya reddedildi"))
-        return
+        return None
     session = None
     if todo:
         import earthaccess
@@ -164,17 +197,37 @@ def ingest():
                 invalid += 1
                 continue
             geom = feat.get("geometry")
-            rows.append((o["id"], o["observedAt"] or "", o["lat"], o["lon"], int(in_turkey([o["lon"]], [o["lat"]])[0]),
-                         json.dumps(geom) if geom and geom.get("type") in ("Polygon", "MultiPolygon") else None,
-                         json.dumps(o, ensure_ascii=False), now))
+            row = (o["id"], o["observedAt"] or "", o["lat"], o["lon"], int(in_turkey([o["lon"]], [o["lat"]])[0]),
+                   json.dumps(geom) if geom and geom.get("type") in ("Polygon", "MultiPolygon") else None,
+                   json.dumps(o, ensure_ascii=False), now)
+            fetched.append(row)
+            if retention.keep_on_ingest(o, protected):
+                rows.append(row)
         with db.tx() as con:
             con.executemany("""INSERT OR REPLACE INTO emit_plumes(id, observed, lat, lon, tr, footprint, obs, fetched_at)
                                VALUES(?,?,?,?,?,?,?,?)""", rows)
             con.executemany("INSERT OR IGNORE INTO plume_seen(id, first_seen, baseline) VALUES(?,?,?)",
                             [(r[0], now, baseline) for r in rows])
+            con.execute("INSERT OR REPLACE INTO ingest_checkpoints(source, item_id, revision, processed_at) "
+                        "VALUES('emit', ?, ?, ?)", (umm.get("GranuleUR"), str(g["meta"].get("revision-id") or ""), now))
         added += len(rows)
     with db.read() as con:
         total, last_obs = con.execute("SELECT COUNT(*), MAX(observed) FROM emit_plumes WHERE tr = 1").fetchone()
     sources.succeeded("emit", records=total, added=added, invalid=invalid, collection=f"{SHORT_NAME} v{version}",
-                      last_observation=last_obs, granules=len(granules))
-    log.info("EMIT: %d granül, %d yeni bulut, %d geçersiz", len(granules), added, invalid)
+                      last_observation=last_obs, granules=len(granules), fetched_granules=len(todo),
+                      last_product_at=now if todo else None)
+    log.info("EMIT: %d granül (%d yeni/revize), %d yeni bulut, %d geçersiz", len(granules), len(todo), added, invalid)
+    stored = {r[0]: r for r in stored_rows()}
+    stored.update({r[0]: (r[0], r[5], r[6], r[4]) for r in fetched})
+    _pending[:] = fetched
+    return list(stored.values())
+
+
+def persist_protected(protected):
+    """Bu turda indirilip aynı turda kalıcı arşive giren eski kayıtlar tabloya eklenir."""
+    keep = [r for r in _pending if r[0] in protected]
+    with db.tx() as con:
+        con.executemany("""INSERT OR IGNORE INTO emit_plumes(id, observed, lat, lon, tr, footprint, obs, fetched_at)
+                           VALUES(?,?,?,?,?,?,?,?)""", keep)
+    _pending.clear()
+    return len(keep)

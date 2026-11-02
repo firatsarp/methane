@@ -22,7 +22,9 @@ FORECAST_HOURS = 72
 FORECAST_ROUND = 0.05
 # Yeniden analiz henüz yayımlanmamışsa bu kadar sonra yeniden denenir
 NOT_PUBLISHED_RETRY = timedelta(hours=6)
-OBS_METHOD = "om-era5-v1"
+# v2: önceki 72 saat yağış ve u/v interpolasyonu için gözlemden 4 gün öncesinden başlayan seri
+OBS_METHOD = "om-era5-v2"
+PRIOR_DAYS = 4
 
 # Zorunlu değişkenler tek istekte; isteğe bağlılar ayrı alınır ki desteklenmeyen biri tüm isteği düşürmesin
 FORECAST_CORE = ["temperature_2m", "precipitation", "wind_speed_10m", "wind_direction_10m"]
@@ -142,7 +144,7 @@ def forecast(lat, lon):
 
 def _om_era5_for(obs):
     target = meteo.parse_utc(obs["observedAt"])
-    day0, day1 = (target - timedelta(days=1)).date(), (target + timedelta(days=1)).date()
+    day0, day1 = (target - timedelta(days=PRIOR_DAYS)).date(), (target + timedelta(days=1)).date()
     base = {"latitude": obs["lat"], "longitude": obs["lon"], "start_date": day0.isoformat(),
             "end_date": day1.isoformat(), "models": "era5", "wind_speed_unit": "ms", "timezone": "UTC"}
     data, missing = _fetch_parts(ARCHIVE_URL, base, ARCHIVE_CORE, ARCHIVE_OPTIONAL)
@@ -182,6 +184,11 @@ def _om_era5_for(obs):
         variables={k: _var_block(units, k, v) for k, v in values.items() if k in VARIABLES},
         wind10=_wind(values.get("wind_speed_10m"), values.get("wind_direction_10m")),
         wind100=_wind(values.get("wind_speed_100m"), values.get("wind_direction_100m")),
+        wind10Interpolated=meteo.interpolate_wind(times, h["wind_speed_10m"], h["wind_direction_10m"], target),
+        wind100Interpolated=meteo.interpolate_wind(times, h.get("wind_speed_100m") or [], h.get("wind_direction_100m")
+                                                   or [], target) if "wind_speed_100m" in h else None,
+        directionChange1h=meteo.direction_change(times, h["wind_direction_10m"], h["wind_speed_10m"], target),
+        precipPrior={f"{n}h": meteo.precip_prior(times, h["precipitation"], target, n) for n in (1, 24, 72)},
         series={"time": [t + "Z" for t in times[lo:hi]], **{k: h[k][lo:hi] for k in h if k != "time"}},
         units=units,
     )

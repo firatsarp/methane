@@ -40,7 +40,7 @@ def _strip_query(url):
     return f"{p.scheme}://{p.netloc}{p.path}"
 
 
-def request(url, *, headers=None, data=None, method=None, timeout=30, raw=False):
+def request(url, *, headers=None, data=None, method=None, timeout=30, raw=False, with_headers=False):
     h = {"User-Agent": USER_AGENT, **(headers or {})}
     body = None
     if data is not None:
@@ -55,6 +55,7 @@ def request(url, *, headers=None, data=None, method=None, timeout=30, raw=False)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             payload = r.read()
+            resp_headers = dict(r.headers.items())
     except urllib.error.HTTPError as e:
         detail = ""
         try:
@@ -65,7 +66,7 @@ def request(url, *, headers=None, data=None, method=None, timeout=30, raw=False)
     except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError) as e:
         raise ProviderError("network", f"{_strip_query(url)}: {getattr(e, 'reason', e)}") from e
     if raw:
-        return payload
+        return (payload, resp_headers) if with_headers else payload
     try:
         return json.loads(payload)
     except ValueError as e:

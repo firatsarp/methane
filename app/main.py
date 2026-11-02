@@ -1,16 +1,21 @@
+import hmac
 import json
 import logging
+import os
+import threading
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI, HTTPException, Query
+from apscheduler.triggers.cron import CronTrigger
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import alerts, catalog, cds, climate, db, emit, imagery, ingest, passes, store, weather
+from . import (alerts, archive, capabilities, catalog, cds, climate, comparison, db, imagery, ingest, interpret,
+               local_import, numeric, passes, peaks, pipeline, policy, retention, store, weather)
 from .config import BBOX, BACKFILL_DAYS, GRID, INGEST_INTERVAL_MIN, STATIC_DIR
 from .geo import turkey_cell_mask
 
@@ -36,10 +41,18 @@ async def lifespan(app):
     db.init()
     now = datetime.now(timezone.utc)
     after = lambda s: now + timedelta(seconds=s)  # noqa: E731
+    store.recover_expired_leases()
     scheduler.add_job(ingest.ingest_tropomi, "interval", minutes=INGEST_INTERVAL_MIN,
                       next_run_time=after(5), id="tropomi", coalesce=True)
-    scheduler.add_job(ingest.ingest_plumes, "interval", hours=24, next_run_time=after(20), id="plumes", coalesce=True)
-    scheduler.add_job(emit.ingest, "interval", hours=24, next_run_time=after(45), id="emit", coalesce=True)
+    # Günlük iş hattı (Carbon Mapper, NASA EMIT, MARS, CAMS -> sınıflandırma -> arşiv -> 90 gün temizliği).
+    # Saat Türkiye saatiyle tanımlıdır; zamanlayıcının kendisi UTC çalışır. Açılışta bir kez de çalışır.
+    scheduler.add_job(pipeline.run, CronTrigger(hour=3, minute=30, timezone="Europe/Istanbul"), id="pipeline",
+                      coalesce=True, max_instances=1, misfire_grace_time=3600)
+    scheduler.add_job(pipeline.run, "date", run_date=after(20), id="pipeline_boot")
+    scheduler.add_job(imagery.check_connection, "interval", hours=6, next_run_time=after(40), id="cdse_check",
+                      coalesce=True)
+    scheduler.add_job(numeric.process_jobs, "interval", minutes=1, next_run_time=after(35), id="raster",
+                      coalesce=True, max_instances=1)
     scheduler.add_job(_seed_climate, "date", run_date=after(120), id="climate_seed")
     scheduler.add_job(climate.process_jobs, "interval", minutes=2, next_run_time=after(150), id="climate",
                       coalesce=True, max_instances=1)
@@ -235,6 +248,137 @@ def observations(
                     "emissionOnly": emission_only, "sort": sort, "timeField": "observedAt"},
         "items": [catalog.public(o) for o in rows[offset:offset + limit]],
     }
+
+
+def _obs_or_404(obs_id):
+    o, _, _ = catalog.get(obs_id)
+    if not o:
+        raise HTTPException(404, "Gözlem bulunamadı")
+    return o
+
+
+def _classification(o, items):
+    """Günlük iş hattının tam (90 gün dışı dahil, bellekte) seri hesabı; yoksa yalnızca pencere + arşivle hesap."""
+    c = pipeline.load_analysis(o["id"], peaks.METHOD)
+    if c:
+        return {**c, "basis": "daily_pipeline_full_catalog"}
+    cls, _ = peaks.classify(items, archive.reviews())
+    return {**cls.get(o["id"], {"state": "ordinary", "reasons": [], "groups": {}}),
+            "basis": "window_and_archive_only"}
+
+
+@app.get("/api/observations/{obs_id:path}/analysis")
+def observation_analysis(obs_id: str):
+    """Yorum motoru sonucu. Meteoroloji önbellekte yoksa tek istekle alınır; sayısal raster arka plan işidir."""
+    o = _obs_or_404(obs_id)
+    items, _ = catalog.load("tr")
+    w = weather.observation_weather(o)
+    num = numeric.request(o)
+    cls = _classification(o, items)
+    result = interpret.interpret(o, w, num, cls, comparison.candidates(o, items))
+    result["classification"] = {"state": cls.get("state"), "basis": cls.get("basis")}
+    result["numeric"] = {k: num.get(k) for k in ("status", "reason", "product", "sha256", "unit", "maskNote")}
+    return result
+
+
+@app.get("/api/observations/{obs_id:path}/comparisons")
+def observation_comparisons(obs_id: str):
+    o = _obs_or_404(obs_id)
+    items, _ = catalog.load("tr")
+    return {"observation": o["id"], "pool": "kalıcı yüksek olay arşivi + son 90 gün",
+            "items": comparison.candidates(o, items)}
+
+
+@app.get("/api/comparisons")
+def compare(a: str = Query(..., max_length=200), b: str = Query(..., max_length=200)):
+    oa, ob = _obs_or_404(a), _obs_or_404(b)
+    if not (oa.get("tr") and ob.get("tr")):
+        raise HTTPException(400, "Karşılaştırma yalnızca Türkiye kapsamındaki gözlemler için yapılır.")
+    return {"decision": comparison.compare(oa, ob), "a": catalog.public(oa), "b": catalog.public(ob)}
+
+
+@app.get("/api/peaks")
+def peaks_list(state: str | None = Query(None, pattern="^(peak_candidate|reviewed_peak|historical_high_reference)$"),
+               scope: str = Query("tr", pattern="^(tr|all)$")):
+    items = archive.list_events(scope, state)
+    return {"policy": policy.peak(), "policyVersion": policy.version(),
+            "scope": "Kalıcı yüksek olay arşivi; normal gözlemler yalnızca son 90 gün saklanır.", "items": items}
+
+
+@app.get("/api/archive/assets/{sha}")
+def archive_asset(sha: str):
+    if not all(c in "0123456789abcdef" for c in sha) or len(sha) != 64:
+        raise HTTPException(400, "Geçersiz özet")
+    path, media = archive.asset(sha)
+    if not path or not path.exists():
+        raise HTTPException(404, "Dosya yok")
+    return FileResponse(path, media_type=media or "application/octet-stream",
+                        headers={"Cache-Control": "public, max-age=31536000, immutable",
+                                 "X-Content-License": "Sağlayıcı lisansı arşiv kaydında; ticari olmayan kullanım"})
+
+
+@app.get("/api/sources/{source_id:path}/history")
+def source_history(source_id: str):
+    s, plumes = catalog.get_source(source_id, scope="tr")
+    items, _ = catalog.load("tr")
+    linked = plumes or [o for o in items if o.get("sourceId") == source_id]
+    if not s and not linked:
+        raise HTTPException(404, "Kaynak bulunamadı")
+    series = {}
+    for o in linked:
+        m = o.get("measurement") or {}
+        key = f"{o.get('sensor')} · {o.get('methodVersion')}"
+        series.setdefault(key, []).append({"id": o["id"], "observedAt": o.get("observedAt"), "value": m.get("value"),
+                                           "unit": m.get("unit"), "archiveState": o.get("archiveState"),
+                                           "fromArchive": bool(o.get("fromArchive"))})
+    return {"source": s, "series": series,
+            "note": "Seriler sensör ve yöntem sürümüne göre ayrıdır; farklı seriler birlikte sıralanmaz. "
+                    "Kaynak ortalaması tek bulutlara atanmaz."}
+
+
+@app.get("/api/retention")
+def retention_status():
+    return {**retention.status(), "pipelineRuns": pipeline.last_runs(3)}
+
+
+@app.get("/api/capabilities")
+def get_capabilities():
+    return {"sources": capabilities.sources_inventory(), "methods": capabilities.methods()}
+
+
+@app.get("/api/source-setup")
+def source_setup():
+    return capabilities.setup_report()
+
+
+def _admin(token):
+    expected = os.environ.get("ADMIN_TOKEN", "").strip()
+    if not expected:
+        raise HTTPException(403, "Yönetici işlemleri sunucuda etkin değil.")
+    if not token or not hmac.compare_digest(token, expected):
+        raise HTTPException(401, "Yetkisiz")
+
+
+@app.get("/api/admin/imports")
+def admin_imports(x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    return {"items": local_import.scan(), "directory": "DATA_DIR/import/<enmap|prisma|landsat>/"}
+
+
+@app.post("/api/admin/peaks/{event_id:path}/review")
+def admin_review(event_id: str, state: str = Query(..., pattern="^(reviewed_peak|rejected_artifact)$"),
+                 note: str = Query("", max_length=500), x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    if not archive.set_review(event_id, state, note):
+        raise HTTPException(404, "Olay yok")
+    return {"ok": True}
+
+
+@app.post("/api/admin/pipeline/run")
+def admin_pipeline(x_admin_token: str | None = Header(None)):
+    _admin(x_admin_token)
+    threading.Thread(target=pipeline.run, daemon=True).start()
+    return {"status": "started"}
 
 
 @app.get("/api/observations/{obs_id:path}")

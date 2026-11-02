@@ -35,7 +35,6 @@ SHORT = {
 # ERA5 son ~5 günü henüz yayımlamaz; daha yeni gözlemler için iş beklemede kalır
 ERA5_LATENCY = timedelta(days=6)
 MAX_ACTIVE = 2
-MAX_ATTEMPTS = 5
 HALF_BOX = 0.25
 
 
@@ -242,7 +241,7 @@ def process_jobs():
             try:
                 _finish(job, client, job["remote_id"])
                 store.job_update(job["id"], state="done", progress=1.0, error_class=None, error=None)
-                sources.succeeded("cds", last_job=job["remote_id"])
+                sources.succeeded("cds", auth="ok", last_job=job["remote_id"], last_product_at=store.iso(store.now()))
             except Exception as e:
                 log.exception("CDS sonucu işlenemedi: %s", job["id"])
                 store.job_update(job["id"], state="failed", error_class=classify(e), error=str(e)[:200])
@@ -257,10 +256,9 @@ def process_jobs():
             remote = client.submit(DATASET, req)
         except Exception as e:
             kind = classify(e)
-            attempts = job["attempts"] + 1
-            # Erişim veya lisans eksikse yeniden denemek anlamsız: kesin tanıyla engellenir
-            state = "blocked" if kind in ("auth", "terms") else ("queued" if attempts < MAX_ATTEMPTS else "failed")
-            store.job_update(job["id"], state=state, attempts=attempts, error_class=kind, error=str(e)[:200])
+            # Erişim/lisans eksikse engellenir (yalnızca başarılı kimlik kontrolü sonrası yeniden kuyruğa alınır);
+            # geçici hatalar sınıfına göre geri çekilmeyle yeniden denenir
+            store.job_fail(job["id"], kind, e, job["attempts"] + 1)
             sources.failed("cds", e, error_class=kind)
             log.warning("CDS gönderimi başarısız (%s): %s", job["id"], kind)
             if kind in ("auth", "terms", "quota"):
@@ -279,4 +277,6 @@ def check_connection():
     except Exception as e:
         sources.failed("cds", e, error_class=classify(e))
         return
-    sources.succeeded("cds", auth="ok")
+    requeued = store.requeue_after_credentials_ok(["cds_obs"])
+    # Kimlik geçerli olmak ürün alındığı anlamına gelmez; ürün zamanı _finish başarısında ayrıca yazılır
+    sources.update("cds", auth="ok", auth_checked_at=store.iso(store.now()), requeued_after_auth=requeued)

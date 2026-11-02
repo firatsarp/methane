@@ -110,7 +110,33 @@ def status_for(obs):
     job = store.job_get(job_id)
     if job and job["state"] in ("failed", "blocked"):
         return {"status": "unavailable", "errorClass": job["error_class"], "job": store.job_public(job)}
+    if job and job["state"] == "queued" and job.get("error_class"):
+        return {"status": "retrying", "errorClass": job["error_class"], "job": store.job_public(job)}
     return {"status": "queued", "job": store.job_public(job)}
+
+
+def check_connection():
+    """OAuth istemci kimliğini gerçek token isteğiyle dener. Başarı yalnızca 'kimlik geçerli' demektir:
+    kaynak, gerçek bir sahne PNG'si alınana kadar sağlıklı sayılmaz. Kimlik düzeldiyse yalnızca bu kaynağın
+    auth/terms nedeniyle engellenmiş görüntü işleri yeniden kuyruğa alınır."""
+    if not configured():
+        return None
+    _token.update(value=None, exp=0.0)
+    try:
+        _access_token()
+    except net.ProviderError as e:
+        sources.update("cdse", auth="failed", auth_checked_at=store.iso(store.now()))
+        sources.failed("cdse", e)
+        return False
+    requeued = store.requeue_after_credentials_ok(["imagery"])
+    current = sources.get("cdse")
+    fields = {"auth": "ok", "auth_checked_at": store.iso(store.now()), "requeued_after_auth": requeued}
+    if current.get("state") != "ok":
+        # Eski arıza yalnızca gerçek ürün alımıyla temizlenir; burada durum "kimlik geçerli, ürün bekleniyor" olur
+        fields.update(state="credentials_ok", previous_error=current.get("error") or "")
+    sources.update("cdse", **fields)
+    log.info("CDSE kimliği geçerli; %d engellenmiş görüntü işi yeniden kuyruğa alındı", requeued)
+    return True
 
 
 def process_jobs(limit=2):
@@ -123,7 +149,8 @@ def process_jobs(limit=2):
             store.job_update(job["id"], state="failed", error_class="not_found", error="Gözlem veya zamanı yok")
             continue
         observed = meteo.parse_utc(obs["observedAt"])
-        store.job_update(job["id"], state="running", attempts=job["attempts"] + 1)
+        store.job_claim(job["id"])
+        store.job_update(job["id"], attempts=job["attempts"] + 1)
         try:
             scenes = search_scenes(obs["lat"], obs["lon"], observed)
             if not scenes:
@@ -142,12 +169,15 @@ def process_jobs(limit=2):
                                   f"zamanından {abs(scene['offsetDays']):.1f} gün "
                                   + ("sonradır." if scene["offsetDays"] > 0 else "öncedir.")}
             store.cache_put(_key(obs["id"]), result)
-            store.job_update(job["id"], state="done", progress=1.0, error_class=None, error=None)
-            sources.succeeded("cdse")
+            store.job_update(job["id"], state="done", progress=1.0, error_class=None, error=None, lease_until=None)
+            # Sağlık yalnızca gerçek ürün (sahne metadata'sı ve/veya PNG) alındığında
+            sources.succeeded("cdse", auth="ok", last_product_at=store.iso(store.now()),
+                              last_product_kind="png" if result["status"] == "ready" else "catalog_empty",
+                              last_scene=(result.get("scene") or {}).get("id"))
         except net.ProviderError as e:
-            state = "blocked" if e.kind in ("auth", "terms") else ("queued" if e.kind in ("quota", "network", "server")
-                                                                    and job["attempts"] < 4 else "failed")
-            store.job_update(job["id"], state=state, error_class=e.kind, error=str(e)[:200])
+            if e.kind == "auth":
+                _token.update(value=None, exp=0.0)
+            store.job_fail(job["id"], e.kind, e, job["attempts"] + 1)
             sources.failed("cdse", e)
-            if e.kind in ("auth", "quota"):
+            if e.kind in ("auth", "terms", "quota"):
                 return

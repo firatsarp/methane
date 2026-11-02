@@ -105,7 +105,117 @@ CREATE TABLE IF NOT EXISTS jobs (
     updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS jobs_kind_state ON jobs(kind, state);
+-- UNEP IMEO MARS yayımlanmış bulutları ve CAMS TROPOMI sıcak noktaları (normal kayıtlar; 90 gün penceresi)
+CREATE TABLE IF NOT EXISTS mars_plumes (
+    id TEXT PRIMARY KEY,
+    observed TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lon REAL NOT NULL,
+    tr INTEGER NOT NULL,
+    obs TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS cams_hotspots (
+    id TEXT PRIMARY KEY,
+    observed TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lon REAL NOT NULL,
+    tr INTEGER NOT NULL,
+    obs TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
+);
+-- Artımlı alma: işlenmiş sağlayıcı öğesi ve revizyonu. Ölçüm değeri içermez.
+CREATE TABLE IF NOT EXISTS ingest_checkpoints (
+    source TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    revision TEXT,
+    processed_at TEXT NOT NULL,
+    PRIMARY KEY (source, item_id)
+);
+-- KALICI yüksek olay arşivi. Sağlayıcı önbelleklerinden (cm_plumes vb.) bağımsızdır; günlük yeniden yazım ve
+-- 90 gün temizliği bu tablolara dokunmaz. active=0: top-N'den çıkmış ve başka koruma gerekçesi olmayan kayıt.
+CREATE TABLE IF NOT EXISTS peak_events (
+    id TEXT PRIMARY KEY,
+    group_key TEXT NOT NULL,
+    state TEXT NOT NULL,
+    reasons TEXT NOT NULL,
+    quantity_kind TEXT,
+    value REAL,
+    unit TEXT,
+    observed TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lon REAL NOT NULL,
+    tr INTEGER NOT NULL,
+    bundle TEXT NOT NULL,
+    bundle_sha TEXT NOT NULL,
+    policy_version TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    review TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS peak_events_group ON peak_events(group_key, active);
+-- Sağlayıcı revizyonları: özgün ve sonraki sürümler düzeltme geçmişiyle korunur
+CREATE TABLE IF NOT EXISTS peak_event_revisions (
+    event_id TEXT NOT NULL,
+    revision INTEGER NOT NULL,
+    provider_modified TEXT,
+    content_sha TEXT NOT NULL,
+    obs TEXT NOT NULL,
+    recorded_at TEXT NOT NULL,
+    PRIMARY KEY (event_id, revision)
+);
+-- Arşiv dosyaları içerik özetiyle (sha256) tekil tutulur; birden çok olay aynı dosyayı paylaşabilir
+CREATE TABLE IF NOT EXISTS archive_assets (
+    sha256 TEXT PRIMARY KEY,
+    path TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    media_type TEXT,
+    license TEXT,
+    fetched_at TEXT NOT NULL
+);
+-- Olay -> dosya bağı. sha256 NULL: dosya arşivlenemedi; neden status/note alanındadır
+CREATE TABLE IF NOT EXISTS archive_asset_refs (
+    event_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    sha256 TEXT,
+    status TEXT NOT NULL,
+    source_url TEXT,
+    note TEXT,
+    PRIMARY KEY (event_id, role)
+);
+-- Yorum motoru sonuçları (normal gözlemler için 90 gün penceresine tabidir)
+CREATE TABLE IF NOT EXISTS analysis_results (
+    obs_id TEXT NOT NULL,
+    method_version TEXT NOT NULL,
+    observed TEXT,
+    computed_at TEXT NOT NULL,
+    result TEXT NOT NULL,
+    PRIMARY KEY (obs_id, method_version)
+);
+CREATE TABLE IF NOT EXISTS maintenance_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    level TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at TEXT NOT NULL,
+    finished_at TEXT,
+    state TEXT NOT NULL,
+    lease_until TEXT,
+    report TEXT
+);
 """
+
+# Var olan tabloya yıkıcı olmayan sütun eklemeleri (tablo, sütun, tanım)
+COLUMN_MIGRATIONS = [
+    ("jobs", "next_attempt_at", "TEXT"),
+    ("jobs", "lease_until", "TEXT"),
+]
+SCHEMA_VERSION = "2"
 
 
 def connect():
@@ -122,6 +232,11 @@ def init():
         if cols and "obs" not in cols:
             con.execute("DROP TABLE cm_plumes")
         con.executescript(SCHEMA)
+        for table, col, decl in COLUMN_MIGRATIONS:
+            if col not in {r[1] for r in con.execute(f"PRAGMA table_info({table})")}:
+                con.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
+        con.execute("INSERT INTO meta(key, value) VALUES('schema_version', ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (SCHEMA_VERSION,))
 
 
 @contextmanager

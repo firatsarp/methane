@@ -332,3 +332,27 @@ details.tech > summary { cursor: pointer; min-height: 36px; display: flex; align
   .thumb { width: 64px; height: 64px; }
 }
 @media (prefers-reduced-motion: reduce) { .results { transition: none; } .skeleton { animation: none; } }
+
+/* Seçili tek bulut lejantı, aynı yerdeki gözlem seçici ve yorum bulguları */
+.lg-plume .lg-note { display: block; margin-top: 2px; line-height: 1.35; }
+.chips-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.obs-chip { min-height: 32px; padding: 4px 10px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.obs-chip:hover, .obs-chip:focus-visible { border-color: var(--brand); background: var(--brand-soft); }
+.obs-chip.noimg { border-style: dashed; color: var(--ink-2); }
+#d-analysis h4 { margin: 12px 0 4px; font-size: 13px; text-transform: none; color: var(--ink); }
+.findings { list-style: none; margin: 0; padding: 0; }
+.findings li { margin: 0 0 6px; padding: 6px 8px; border-left: 3px solid var(--border); background: var(--surface-2); border-radius: 4px; font-size: 13.5px; line-height: 1.4; }
+.findings li small { display: block; margin-top: 3px; color: var(--ink-2); font-size: 12px; }
+.findings .badge { margin: 0 4px 0 0; font-weight: 600; }
+.findings li.f-supported { border-left-color: #2e7d4f; }
+.findings li.f-supported .badge { background: #e3f4ea; color: #1d6b3e; }
+.findings li.f-limited { border-left-color: #c58a12; }
+.findings li.f-limited .badge { background: #fbf0d6; color: #7a5300; }
+.findings li.f-insufficient_data { border-left-color: #8696a4; }
+.findings li.f-insufficient_data .badge { background: #e9edf1; color: #43525f; }
+.findings li.f-requires_validation { border-left-color: #6b4fa0; }
+.findings li.f-requires_validation .badge { background: #efe9f8; color: #4b3478; }
+.lead-sm { font-size: 14.5px; line-height: 1.45; color: var(--ink); margin: 0 0 6px; }
+details.refs { margin-top: 8px; font-size: 13px; }
+details.refs summary { cursor: pointer; font-weight: 600; }

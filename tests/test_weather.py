@@ -12,9 +12,11 @@ OBS = {"id": "tan20260926t095339c05s4001-A", "observedAt": "2026-09-26T09:53:39.
 
 
 def archive_payload(params):
-    """Open-Meteo archive yanıtı biçiminde 3 günlük saatlik seri."""
+    """Open-Meteo archive yanıtı biçiminde, istenen start_date–end_date günlerini kapsayan saatlik seri."""
     start = datetime.fromisoformat(params["start_date"]).replace(tzinfo=timezone.utc)
-    times = [(start + timedelta(hours=k)).strftime("%Y-%m-%dT%H:%M") for k in range(72)]
+    end = datetime.fromisoformat(params.get("end_date", params["start_date"])).replace(tzinfo=timezone.utc)
+    n = int((end - start).total_seconds() // 3600) + 24
+    times = [(start + timedelta(hours=k)).strftime("%Y-%m-%dT%H:%M") for k in range(n)]
     hourly = {"time": times}
     units = {"time": "iso8601"}
     unit_of = {"temperature_2m": "°C", "precipitation": "mm", "wind_speed_10m": "m/s", "wind_direction_10m": "°",
@@ -23,7 +25,7 @@ def archive_payload(params):
     for var in params["hourly"].split(","):
         if var == "boundary_layer_height" and params.get("_no_blh"):
             raise net.ProviderError("bad_response", "HTTP 400 unsupported", 400)
-        hourly[var] = [float(k) for k in range(72)]
+        hourly[var] = [float(k) for k in range(n)]
         units[var] = unit_of[var]
     return {"latitude": 37.75, "longitude": 32.5, "elevation": 1010.0, "hourly": hourly, "hourly_units": units}
 
@@ -64,7 +66,7 @@ class ObservationWeatherTest(unittest.TestCase):
             d = archive_payload(params)
             for k in d["hourly"]:
                 if k != "time":
-                    d["hourly"][k] = [None] * 72
+                    d["hourly"][k] = [None] * len(d["hourly"]["time"])
             return d
         with mock.patch.object(net, "get_json", side_effect=fake):
             r = weather.observation_weather(recent)

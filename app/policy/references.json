@@ -1,0 +1,255 @@
+{
+  "studies": [
+    {
+      "id": "G21",
+      "author": "Guanter ve arkadaşları",
+      "year": 2021,
+      "title": "Mapping methane point emissions with the PRISMA spaceborne imaging spectrometer",
+      "url": "https://doi.org/10.1016/j.rse.2021.112671",
+      "pages": "PDF s. 1, 3–8, 10–12",
+      "scope": "Görüntüleme spektroskopisiyle metan bulutlarının belirlenmesi, gözlem koşulları ve salım hızı tahmini."
+    },
+    {
+      "id": "F20",
+      "author": "Foote ve arkadaşları",
+      "year": 2020,
+      "title": "Fast and Accurate Retrieval of Methane Concentration from Imaging Spectrometer Data Using Sparsity Prior",
+      "url": "https://doi.org/10.1109/TGRS.2020.2976888",
+      "pages": "PDF s. 1, 11",
+      "scope": "Seyreklik ve albedo düzeltmesiyle metan sinyalinin çıkarılması."
+    },
+    {
+      "id": "F21",
+      "author": "Foote ve arkadaşları",
+      "year": 2021,
+      "title": "Impact of scene-specific enhancement spectra on matched filter greenhouse gas retrievals from imaging spectroscopy",
+      "url": "https://doi.org/10.1016/j.rse.2021.112574",
+      "pages": "PDF s. 1, 10",
+      "scope": "Sahneye uygun hedef spektrumlarının metan çıkarımına etkisi."
+    },
+    {
+      "id": "FR05",
+      "author": "Frankenberg, Platt ve Wagner",
+      "year": 2005,
+      "title": "Iterative maximum a posteriori (IMAP)-DOAS for retrieval of strongly absorbing trace gases",
+      "url": "https://doi.org/10.5194/acp-5-9-2005",
+      "pages": "PDF s. 1, 12–13",
+      "scope": "Gaz soğurmasının atmosfer ve sensör özellikleriyle birlikte hesaplanması."
+    },
+    {
+      "id": "TH15",
+      "author": "Thompson ve arkadaşları",
+      "year": 2015,
+      "title": "Real-time remote detection and measurement for airborne imaging spectroscopy: a case study with methane",
+      "url": "https://doi.org/10.5194/amt-8-4383-2015",
+      "pages": "PDF s. 1, 11",
+      "scope": "Uçak üzerinde görüntüleme spektroskopisiyle metan tespiti."
+    },
+    {
+      "id": "TH17",
+      "author": "Thorpe ve arkadaşları",
+      "year": 2017,
+      "title": "Airborne DOAS retrievals of methane, carbon dioxide, and water vapor concentrations at high spatial resolution: application to AVIRIS-NG",
+      "url": "https://doi.org/10.5194/amt-10-3833-2017",
+      "pages": "PDF s. 9–10",
+      "scope": "Yüksek uzamsal çözünürlüklü gaz çıkarımları ve yer ölçümleriyle birlikte inceleme."
+    },
+    {
+      "id": "B21",
+      "author": "Borchardt ve arkadaşları",
+      "year": 2021,
+      "title": "Detection and quantification of CH4 plumes using the WFM-DOAS retrieval on AVIRIS-NG hyperspectral data",
+      "url": "https://doi.org/10.5194/amt-14-1267-2021",
+      "pages": "PDF s. 1, 17–18",
+      "scope": "Metan bulutlarının çıkarımı, rüzgâr bilgisi ve miktar tahminindeki belirsizlikler."
+    },
+    {
+      "id": "SC23",
+      "author": "Schuit ve arkadaşları",
+      "year": 2023,
+      "title": "Automated detection and monitoring of methane super-emitters using satellite data",
+      "url": "https://doi.org/10.5194/acp-23-9071-2023",
+      "pages": "PDF s. 1, 17–18",
+      "scope": "Bölgesel tarama ile yüksek çözünürlüklü takibin birlikte kullanımı."
+    },
+    {
+      "id": "P23",
+      "author": "Pei ve arkadaşları",
+      "year": 2023,
+      "title": "Improving quantification of methane point source emissions from imaging spectroscopy",
+      "url": "https://doi.org/10.1016/j.rse.2023.113652",
+      "pages": "PDF s. 1, 10–12",
+      "scope": "Bulut sınırları, arka plan ve yüzey özelliklerinin miktar hesabına etkisi."
+    },
+    {
+      "id": "R24",
+      "author": "Roger ve arkadaşları",
+      "year": 2024,
+      "title": "Exploiting the entire near-infrared spectral range to improve the detection of methane plumes with high-resolution imaging spectrometers",
+      "url": "https://doi.org/10.5194/amt-17-1333-2024",
+      "pages": "PDF s. 1, 12",
+      "scope": "Geniş spektral aralık kullanılarak metan ile yüzey sinyalinin ayrılması."
+    },
+    {
+      "id": "S23",
+      "author": "Sherwin ve arkadaşları",
+      "year": 2023,
+      "title": "Single-blind validation of space-based point-source detection and quantification of onshore methane emissions",
+      "url": "https://doi.org/10.1038/s41598-023-30761-2",
+      "pages": "PDF s. 1, 5–6",
+      "scope": "Bilinen metan salımlarıyla uydu tespit ve miktar tahmininin değerlendirilmesi."
+    },
+    {
+      "id": "S24",
+      "author": "Sherwin ve arkadaşları",
+      "year": 2024,
+      "title": "Single-blind test of nine methane-sensing satellite systems from three continents",
+      "url": "https://doi.org/10.5194/amt-17-765-2024",
+      "pages": "PDF s. 1, 13–14",
+      "scope": "Farklı uydu sistemlerinin kontrollü salımlarla karşılaştırılması."
+    },
+    {
+      "id": "M24",
+      "author": "Marjani ve arkadaşları",
+      "year": 2024,
+      "title": "PRISMethaNet: A novel deep learning model for landfill methane detection using PRISMA satellite data",
+      "url": "https://doi.org/10.1016/j.isprsjprs.2024.10.003",
+      "pages": "PDF s. 1, 15–16",
+      "scope": "Derin öğrenmeyle metan bulutlarının ve sınırlarının belirlenmesi."
+    },
+    {
+      "id": "ME23",
+      "author": "Mei ve arkadaşları",
+      "year": 2023,
+      "title": "SCIATRAN software package (V4.6): update and further development of aerosol, clouds, surface reflectance databases and models",
+      "url": "https://doi.org/10.5194/gmd-16-1511-2023",
+      "pages": "PDF s. 1, 19",
+      "scope": "Atmosfer, yüzey ve sensör arasındaki ışınım aktarımını hesaplayan model altyapısı."
+    },
+    {
+      "id": "H19",
+      "author": "Roman V. Kochanov",
+      "year": 2019,
+      "title": "HITRAN Application Programming Interface (HAPI) User Guide, ver. 4.3",
+      "url": "https://hitran.org/hapi/",
+      "pages": "PDF s. 3, 20, 26–28",
+      "scope": "Moleküler soğurma spektrumlarını hesaplamak için HAPI kullanıcı kılavuzu."
+    },
+    {
+      "id": "PR26",
+      "author": "Birnstengel, Simpson ve Vogt / Prognos ve ifeu",
+      "year": 2026,
+      "title": "Methane emissions from Europe’s landfills: Scenarios and Data Challenges",
+      "url": null,
+      "pages": "PDF s. 4–7, 22–25",
+      "scope": "Atık sahalarında zamana bağlı metan oluşumuna ilişkin senaryolar ve veri gereksinimleri."
+    }
+  ],
+  "officialSources": [
+    {
+      "id": "CM",
+      "title": "Carbon Mapper ürün kılavuzu",
+      "url": "https://carbonmapper.org/articles/product-guide"
+    },
+    {
+      "id": "NASA",
+      "title": "NASA Earthdata Search",
+      "url": "https://search.earthdata.nasa.gov/"
+    },
+    {
+      "id": "EMIT",
+      "title": "EMIT L2B GHG kullanıcı kılavuzu",
+      "url": "https://lpdaac.usgs.gov/documents/2250/EMIT_L2B_GHG_User_Guide_V2.pdf"
+    },
+    {
+      "id": "CDSE",
+      "title": "Sentinel Hub OAuth doğrulama",
+      "url": "https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Overview/Authentication.html"
+    },
+    {
+      "id": "CDSE_CAT",
+      "title": "Sentinel Hub Catalog API",
+      "url": "https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Catalog.html"
+    },
+    {
+      "id": "CDS",
+      "title": "Climate Data Store API kurulumu",
+      "url": "https://cds.climate.copernicus.eu/how-to-api"
+    },
+    {
+      "id": "ENMAP",
+      "title": "EnMAP veri erişimi",
+      "url": "https://www.enmap.org/data_access/"
+    },
+    {
+      "id": "ENMAP_ARD",
+      "title": "EnMAP L1B/L1C ARD erişimi, 16 Ekim 2026",
+      "url": "https://www.enmap.org/news/2026-10-16_2/"
+    },
+    {
+      "id": "PRISMA",
+      "title": "ASI PRISMA kullanıcı başvurusu",
+      "url": "https://prismauserregistration.asi.it/"
+    },
+    {
+      "id": "USGS",
+      "title": "USGS M2M Application Token",
+      "url": "https://www.usgs.gov/media/files/m2m-application-token-documentation"
+    },
+    {
+      "id": "GOSAT",
+      "title": "GOSAT Data Archive Service",
+      "url": "https://data2.gosat.nies.go.jp/index_en.html"
+    },
+    {
+      "id": "GOSAT2",
+      "title": "GOSAT-2 Product Archive",
+      "url": "https://prdct.gosat-2.nies.go.jp/app/loginpage/display?locale=en"
+    },
+    {
+      "id": "GOSATGW",
+      "title": "GOSAT-GW TANSO-3 Product Archive",
+      "url": "https://product.gosat-gw.nies.go.jp/en/loginpage/"
+    },
+    {
+      "id": "GHGSAT",
+      "title": "GHGSat erişim yolları",
+      "url": "https://www.ghgsat.com/partners/"
+    },
+    {
+      "id": "MARS",
+      "title": "UNEP MARS veri indirme, veri sözlükleri ve kullanım koşulları",
+      "url": "https://methanedata.unep.org/download-dataset"
+    },
+    {
+      "id": "CAMS",
+      "title": "CAMS Methane Hotspot Explorer",
+      "url": "https://atmosphere.copernicus.eu/ghg-services/cams-methane-hotspot-explorer"
+    },
+    {
+      "id": "MSAT",
+      "title": "MethaneSAT mevcut arşiv verilerinin yayımlanması",
+      "url": "https://www.methanesat.org/project-updates/new-methane-emissions-insights-will-continue-methanesat-data-catalogue-processed"
+    },
+    {
+      "id": "CDS_CH4",
+      "title": "CDS uydu metan veri kümesi",
+      "url": "https://cds.climate.copernicus.eu/datasets/satellite-methane?tab=download"
+    },
+    {
+      "id": "AIRS",
+      "title": "NASA CLIMCAPS CH4 ürün rehberi",
+      "url": "https://airs.jpl.nasa.gov/data/guides-docs/climcaps-science/climcaps-science-guide/geophysical-products/methane/"
+    },
+    {
+      "id": "EE",
+      "title": "Google Earth Engine erişimi ve proje kaydı",
+      "url": "https://developers.google.com/earth-engine/guides/access"
+    },
+    {
+      "id": "ERA5",
+      "title": "ERA5 saatlik tek seviye verileri",
+      "url": "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels"
+    }
+  ]
+}

@@ -16,6 +16,11 @@ services:
       - CDSE_CLIENT_SECRET=${CDSE_CLIENT_SECRET:-}
       - CDSAPI_URL=${CDSAPI_URL:-https://cds.climate.copernicus.eu/api}
       - CDSAPI_KEY=${CDSAPI_KEY:-}
+      # Yönetici uçları (inceleme, elle iş hattı, içe aktarma listesi); boşsa bu uçlar kapalıdır
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      # İsteğe bağlı mutlak kg/sa aday eşiği; varsayılan yok (evrensel eşik uydurulmaz)
+      - PEAK_ABSOLUTE_KGH=${PEAK_ABSOLUTE_KGH:-}
+      - APP_ENV=${APP_ENV:-production}
     volumes:
       - metan-data:/data
 

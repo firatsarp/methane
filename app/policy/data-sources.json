@@ -1,0 +1,196 @@
+{
+  "reviewedAt": "2026-11-02",
+  "providers": [
+    {
+      "id": "carbon_mapper",
+      "priority": 1,
+      "products": [
+        "Planet Tanager-1 metan ürünleri",
+        "Carbon Mapper'da yayımlanan EMIT ürünleri"
+      ],
+      "role": "Sağlayıcının bulut bazlı CH4 artış/salım ürünleri; kaynak özetleri ayrı ürün.",
+      "access": "Mevcut CARBON_MAPPER_API_TOKEN; yeni üyelik açma.",
+      "automation": "Mevcut belgeli API ve sayfalama; son değiştirilme ve yayım gecikmesi korunur.",
+      "citations": [
+        "CM"
+      ]
+    },
+    {
+      "id": "nasa_emit",
+      "priority": 1,
+      "products": [
+        "EMIT L2B CH4 artış haritaları ve incelenmiş bulutlar",
+        "Gerektiğinde ilgili L1/L2A sahneler"
+      ],
+      "role": "Bulut, sayısal artış haritası ve bağımsız erişim yolu. CM'daki aynı EMIT çekimi ikinci ölçüm değildir.",
+      "access": "Mevcut NASA Earthdata hesabı ve ürünün gerektirdiği yetkilendirme.",
+      "automation": "CMR/Earthdata üzerinden güncel koleksiyon ve sürüm keşfi; sabit eski koleksiyon kimliği uydurma.",
+      "citations": [
+        "NASA",
+        "EMIT"
+      ]
+    },
+    {
+      "id": "tropomi",
+      "priority": 1,
+      "products": [
+        "Sentinel-5P TROPOMI L2 CH4"
+      ],
+      "role": "Bölgesel XCH4/arka plan/anomali; tek tesisin kg/saat değeriyle doğrudan eşitlenmez.",
+      "access": "Mevcut NASA GES DISC/Earthdata akışını koru; CDSE alternatif yol olabilir.",
+      "automation": "Gerçek piksel sınırları, QA ve ürün sürümüyle günlük tarama.",
+      "citations": [
+        "NASA",
+        "CAMS"
+      ]
+    },
+    {
+      "id": "sentinel2",
+      "priority": 1,
+      "products": [
+        "Sentinel-2 L2A yüzey görüntüsü",
+        "Yönteme uygun SWIR bantları ve referans sahneleri"
+      ],
+      "role": "Mevcut doğal renkli görüntü bağlam sağlar. Metan çıkarımı ayrı, doğrulanması gereken sayısal SWIR işlem hattıdır.",
+      "access": "Mevcut CDSE_CLIENT_ID ve CDSE_CLIENT_SECRET; aynı OAuth istemcisi.",
+      "automation": "Belgeli Catalog/Process servisleri. PNG'den metan miktarı çıkarma.",
+      "citations": [
+        "CDSE",
+        "CDSE_CAT",
+        "S23",
+        "S24"
+      ]
+    },
+    {
+      "id": "unep_mars",
+      "priority": 1,
+      "products": [
+        "MARS sources/plumes CSV ve GeoJSON"
+      ],
+      "role": "Yayımlanmış bulut ve kaynak tahminleri; aynı uydu çekimiyle elde edilen sonuçların soy ağacı korunur.",
+      "access": "İndirme sayfasında self-service API anahtarı gerekmiyor; BY-NC-SA 4.0 kullanım kapsamı ve atıf şartları geçerli.",
+      "automation": "Resmî indirme bağlantısı ve veri sözlüğünü keşfet; yayımlama sıklığını gerçek zamanlı ölçüm gibi sunma.",
+      "citations": [
+        "MARS"
+      ]
+    },
+    {
+      "id": "cams_hotspots",
+      "priority": 1,
+      "products": [
+        "CAMS TROPOMI metan sıcak nokta tespitleri"
+      ],
+      "role": "Bölgesel tarama/takip hedefi. TROPOMI ile aynı temel gözlemden geliyorsa bağımsız kanıt değildir.",
+      "access": "Kamuya açık portal; belgelenmiş indirme servisi yoksa portalın özel isteklerini tersine mühendislikle üretim API'si sayma.",
+      "automation": "Resmî dışa aktarım yolu doğrulanınca bağla; tesis konumunu kesinleştirme.",
+      "citations": [
+        "CAMS"
+      ]
+    },
+    {
+      "id": "enmap",
+      "priority": 2,
+      "products": [
+        "EnMAP L1B/L1C radyans",
+        "EnMAP L2A yansıma ve maskeler"
+      ],
+      "role": "Hiperspektral, bağımsız çekimlerle inceleme; ürün seviyesi metan yöntemine göre seçilir.",
+      "access": "EnMAP IPS kaydı ve ilişkili EOWEB alt hesabı. EOC Geoservice ARD erişimini doğrula.",
+      "automation": "Resmî katalog/STAC/indirme belgeleriyle; 16 Ekim 2026 duyurusunda L1B/L1C ARD erişimi de var.",
+      "citations": [
+        "ENMAP",
+        "ENMAP_ARD"
+      ]
+    },
+    {
+      "id": "prisma",
+      "priority": 2,
+      "products": [
+        "PRISMA hiperspektral ürünleri ve kalibrasyon/konum bilgisi"
+      ],
+      "role": "Metan artışı ve araştırma amaçlı salım tahmini için bağımsız çekimler.",
+      "access": "ASI başvurusundaki dijital lisans/kullanıcı dosyası yükleme ve hesap onayı.",
+      "automation": "Başvuruyla otomatik bir API tokenı verilmiş sayma. İzinli servis belgeleri doğrulanana kadar lisanslı dosya içe aktarma yolu sağla.",
+      "citations": [
+        "PRISMA",
+        "G21"
+      ]
+    },
+    {
+      "id": "landsat",
+      "priority": 2,
+      "products": [
+        "Landsat 8/9 OLI SWIR sahneleri",
+        "Yönteme uygun daha eski Landsat arşivi"
+      ],
+      "role": "Geçmiş görüntü/çok bantlı değişim ve doğrulanmış yöntemle güçlü bulut taraması; doğal renk görüntüsü CH4 ürünü değildir.",
+      "access": "USGS ERS; M2M kullanılırsa Application Token ve hesabın gereken erişimi. Kamuya açık katalog alternatifini de değerlendir.",
+      "automation": "USGS login-token akışı; eski parola ile login akışını yeni kurulumda kullanma.",
+      "citations": [
+        "USGS",
+        "S23",
+        "S24"
+      ]
+    },
+    {
+      "id": "gosat_family",
+      "priority": 3,
+      "products": [
+        "GOSAT",
+        "GOSAT-2",
+        "GOSAT-GW TANSO-3; yayımlanmış ve kullanılabilir ürünler"
+      ],
+      "role": "XCH4/bölgesel ve uzun dönem bağlamı. Üç arşivin hesabı ve veri sürümü ayrı doğrulanır.",
+      "access": "İlgili NIES portallarında kullanıcı kaydı; otomatik indirme imkânını her portal için belgele.",
+      "automation": "Geçiş/kalibrasyon/bakım ve gerçek bölge kapsamı katalogdan doğrulanır; tesis bulutu gibi kullanılmaz.",
+      "citations": [
+        "GOSAT",
+        "GOSAT2",
+        "GOSATGW"
+      ]
+    },
+    {
+      "id": "ghgsat",
+      "priority": 3,
+      "products": [
+        "Lisans kapsamında GHGSat tesis/bulut ürünleri"
+      ],
+      "role": "Karşılaştırmaya uygun bağımsız çekimler varsa yüksek çözünürlüklü doğrulama.",
+      "access": "Ticari sağlayıcı anlaşması veya onaylı ESA TPM araştırma erişimi. NASA CSDA erişimi uygunluk koşullu; Earthdata hesabı tek başına yeterli değildir.",
+      "automation": "Sağlayıcının verdiği gerçek API belgesi/yetkisiyle bağla; hayali endpoint/token üretme.",
+      "citations": [
+        "GHGSAT"
+      ]
+    },
+    {
+      "id": "methanesat_archive",
+      "priority": 3,
+      "products": [
+        "Yayımlanmış MethaneSAT tarihsel ürünleri"
+      ],
+      "role": "Arşiv karşılaştırması; yeni gözlem üreten bir izleme kaynağı olarak planlanmaz.",
+      "access": "Resmî veri portalı ve yayımlanmış Earth Engine katalog kayıtları; Türkiye sahnesi varsa kullan.",
+      "automation": "Uyduyla temas 20 Haziran 2025'te kaybedildi. Sonradan yayımlanan eski sahnenin observedAt ve publishedAt alanlarını ayır.",
+      "citations": [
+        "MSAT",
+        "EE"
+      ]
+    },
+    {
+      "id": "regional_profiles_archive",
+      "priority": 4,
+      "products": [
+        "CDS satellite-methane/SCIAMACHY-GOSAT birleşik ürünleri",
+        "IASI orta troposfer CH4",
+        "NASA AIRS/CrIS CH4 profilleri"
+      ],
+      "role": "Geniş ölçekli/uzun dönem bağlamı; farklı dikey duyarlılıkları ve averaging kernel gereksinimleri var.",
+      "access": "CDS veya NASA hesabı; ürün bazında ek kullanım koşulu gerekebilir.",
+      "automation": "Önce katalogda mevcut dönem ve alanı kontrol et. Bu profilleri yüzeydeki tesis salımına dönüştürme.",
+      "citations": [
+        "CDS_CH4",
+        "AIRS"
+      ]
+    }
+  ]
+}

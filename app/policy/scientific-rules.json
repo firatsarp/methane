@@ -1,0 +1,233 @@
+{
+  "schemaVersion": "1.0.0",
+  "reviewedAt": "2026-11-02",
+  "country": "TR",
+  "scope": "Mevcut firatsarp/methane; önce metan.sarpify.com. Azerbaycan sonraki aşama.",
+  "policyNotice": "Sayısal operasyon eşikleri proje başlangıç tercihleridir; makalelerden evrensel bilimsel eşik olarak alınmamıştır. Sürümle, geriye dönük sına ve yönetilebilir kıl.",
+  "retention": {
+    "ordinaryObservationDays": 90,
+    "cutoffBasis": "observedAt_UTC",
+    "ingestionCadence": "daily",
+    "keepHighEventsPermanently": true,
+    "keepAllHistoricalOrdinaryObservations": false,
+    "comparisonScope": [
+      "kalıcı yüksek olaylar",
+      "son 90 gündeki normal gözlemler"
+    ],
+    "permanentOrdinaryPinsEnabledByDefault": false,
+    "archiveBundle": [
+      "kanonik gözlem ve sağlayıcı sürümleri",
+      "bulut/sayısal raster ve maskeler: erişim/lisans elverdiği ölçüde",
+      "gözlem anı meteorolojisi",
+      "analiz ve temel istatistik anlık görüntüsü",
+      "kaynakça ve veri soy ağacı",
+      "kural/kalibrasyon/yöntem sürümü",
+      "arşiv seçimi gerekçesi"
+    ],
+    "cleanupOrder": [
+      "yüksek olayları sınıflandır",
+      "korunan paketi doğrula",
+      "referansları kontrol et",
+      "90 gün dışındaki normal kayıtları işlemsel sil",
+      "sahipsiz dosya/önbellek/işleri temizle"
+    ],
+    "failurePolicy": "Eksik meteoroloji veya bulunmayan uydu ürünü, insufficient_data sonucu olarak tamamlanır ve tek başına temizliği durdurmaz. Korunacak pakette gerçek yazma/bütünlük hatası varsa o paketi riske atan silme ertelenir ve bakım hatası bildirilir; eksik veri süresiz normal arşiv yaratmaz."
+  },
+  "peakPolicy": {
+    "absoluteEmissionThresholdKgh": null,
+    "robustBaselineDays": 90,
+    "minimumReferenceObservations": 10,
+    "minimumReferenceDays": 5,
+    "robustZCandidateThreshold": 3.5,
+    "madScale": 1.4826,
+    "baselineUsesOnlyEarlierObservations": true,
+    "baselineGrouping": [
+      "source association",
+      "measurement kind",
+      "sensor",
+      "retrieval method/version",
+      "quality and meteorological comparability"
+    ],
+    "zeroMadPolicy": "İstatistiksel z sonucu üretme; örneklem/yayılım yetersiz gerekçesi ver.",
+    "sparseHistoryArchiveTopN": 3,
+    "sparseHistoryLabel": "Mevcut örneklemdeki en yüksek gözlemler; istatistiksel pik doğrulanmadı.",
+    "topNGrouping": [
+      "source association",
+      "measurement kind",
+      "sensor",
+      "retrieval method/version"
+    ],
+    "states": [
+      "ordinary",
+      "peak_candidate",
+      "reviewed_peak",
+      "historical_high_reference",
+      "rejected_artifact"
+    ],
+    "noObservationIsNotZero": true,
+    "exception": "Yüksek olayın analiz özeti/baseline istatistikleri paketin parçasıdır; geçmişteki bütün normal ölçümleri bu gerekçeyle kalıcı saklama."
+  },
+  "comparisons": {
+    "modes": [
+      "near_time_independent",
+      "historical_change",
+      "context_only"
+    ],
+    "nearTimeCandidateMaxMinutes": 30,
+    "nearTimeWindowIsOperationalDefault": true,
+    "sourceSpatialTolerance": "Footprint/konum belirsizliği ve kaynak ilişkisine göre; sabit yakınlık tek başına tesis eşleştirmesi değildir.",
+    "sameAcquisitionIsIndependent": false,
+    "quantityFamilies": [
+      "emission_rate_kg_h",
+      "dry_air_column_xch4_ppb",
+      "column_enhancement_ppm_m",
+      "column_mass_enhancement_kg_m2",
+      "vertical_profile"
+    ],
+    "forbiddenRatios": [
+      "kg/h versus ppb",
+      "kg/h versus ppm*m",
+      "source mean versus one plume",
+      "MTCH4 versus surface emission"
+    ],
+    "uncertaintyRule": "Sağlayıcının tanımını koru. Yalnızca aynı istatistiksel anlama sahip ve bağımsızlığı belgeli belirsizlikler için birleşik sigma hesabı; diğerleri ayrı gösterilir.",
+    "historicalDifference": "Aynı nicelik ve uygun seri için geçmiş farkı gösterilebilir; farklı tarihteki iki ölçüm bağımsız eşzamanlı doğrulama diye adlandırılmaz."
+  },
+  "meteorology": {
+    "maxNearestOffsetMinutes": 60,
+    "interpolate": "u/v bileşenleriyle, yalnızca geçerli iki zaman noktası varsa",
+    "calmWindMs": 0.5,
+    "weakWindWarningMs": 2.0,
+    "directionMismatchWarningDeg": 45,
+    "thresholdsAreOperationalDefaults": true,
+    "windConvention": "Meteorolojik FROM; taşıma yönü FROM+180 modulo 360.",
+    "inputs": [
+      "u/v veya hız/yön, 10 m ve varsa 100 m",
+      "gözlem zamanı",
+      "model hücresi ve yüksekliği",
+      "sınır tabakası yüksekliği varsa",
+      "sıcaklık",
+      "basınç",
+      "nem",
+      "bulut",
+      "önceki 1/24/72 saat yağış, veri varsa"
+    ],
+    "sameEra5DifferentAccessIsIndependent": false,
+    "automaticProviderFluxCorrection": false,
+    "climateCausesEmissionClaim": false
+  },
+  "map": {
+    "defaultPlumeRasterCount": 0,
+    "maximumPlumeRastersPerViewport": 1,
+    "loadOn": "açıkça seçilen gözlem",
+    "panZoomLoadsAllPlumes": false,
+    "coLocatedSelection": "önce tarih/sensör listesi; sonra tek gözlemi seç",
+    "comparisonLayout": "yan yana, her görünümde tek bulut",
+    "countryMaskRequired": true,
+    "asyncRule": "önceki isteği iptal et veya seçim nesliyle reddet; eski yanıt yeni seçime çizilmez"
+  },
+  "analysisOutput": {
+    "levels": [
+      "supported",
+      "limited",
+      "insufficient_data",
+      "requires_validation"
+    ],
+    "findingFields": [
+      "ruleId",
+      "status",
+      "claim",
+      "inputIds",
+      "facts",
+      "missingInputs",
+      "limitations",
+      "referenceIds",
+      "methodVersion"
+    ],
+    "llmRequired": false,
+    "llmMayInventNumbers": false,
+    "standaloneInterpretationRequired": true
+  },
+  "methodTraceability": [
+    {
+      "reference": "G21",
+      "apply_now": "Metan artışını, miktar tahminini ve gözlem koşullarını ayrı kaydet; jeoreferans ve ürün seviyesini koru.",
+      "conditional": "PRISMA sayısal hiperspektral veri ve gerekli metadata gelince metan çıkarımı/IME iş hattı."
+    },
+    {
+      "reference": "F20",
+      "apply_now": "Yüzey/albedo ve gürültü kaynaklı kısıtları analiz kaydına taşı.",
+      "conditional": "Seyreklik/albedo düzeltmeli matched filter; uygun spektral veri ve doğrulama örnekleriyle."
+    },
+    {
+      "reference": "F21",
+      "apply_now": "Sahneye ait güneş/geometri, su buharı ve yüzey yüksekliği girdilerinin varlığını takip et.",
+      "conditional": "Sahneye özgü hedef spektrumu ve yöntem duyarlılık deneyi; sağlayıcı Q değerine genel düzeltme katsayısı uygulama."
+    },
+    {
+      "reference": "FR05",
+      "apply_now": "Güçlü soğurmalarda doğrusal varsayımın ve gaz girişimlerinin yöntem kısıtı olabileceğini bildir.",
+      "conditional": "IMAP-DOAS ileri modeli, öncüller ve spektral kalibrasyonla ayrı araştırma yöntemi."
+    },
+    {
+      "reference": "TH15",
+      "apply_now": "Hızlı aday taraması ile doğrulanmış bulut/salım sonucunu farklı durumlar olarak tasarla.",
+      "conditional": "Uçak için geliştirilen yöntem/başarımı uyduya doğrudan taşımadan yeniden doğrulama."
+    },
+    {
+      "reference": "TH17",
+      "apply_now": "CH4, CO2, su buharı, sensör ve yöntem sürümlerinin soy ağacını sakla.",
+      "conditional": "Çok gazlı IMAP-DOAS ve karşılaştırmalı yöntem deneyi; yüksek çözünürlüklü uygun spektral veri."
+    },
+    {
+      "reference": "B21",
+      "apply_now": "Rüzgârın yükseklik/zaman/model/konum ve belirsizlik bilgisini salım yorumuna kat.",
+      "conditional": "WFM-DOAS, sayısal artış haritası ve kalibre edilmiş salım modeliyle; 10 m rüzgârını otomatik Ueff kabul etme."
+    },
+    {
+      "reference": "SC23",
+      "apply_now": "Bölgesel tarama -> yüksek çözünürlüklü inceleme -> tekrar gözlem sürecini kur; büyük pikselde birden fazla kaynak olasılığını koru.",
+      "conditional": "Eğitilmiş model ve bağımsız değerlendirme verisi varsa otomatik plume sınıflandırıcısı; model adı tek başına kanıt değildir."
+    },
+    {
+      "reference": "P23",
+      "apply_now": "Yöntem, arka plan, maske ve yüksek artışlarda doğrusal yaklaşım kısıtını ayrı alanlarda sakla.",
+      "conditional": "ILMF ve MF yöntem karşılaştırması; makaledeki iyileşme oranını her sahneye garanti olarak uygulama."
+    },
+    {
+      "reference": "R24",
+      "apply_now": "Yüzey/gaz girişimi ve mevcut spektral kapsam kısıtlarını açıkla.",
+      "conditional": "Geniş spektral aralıkla çıkarım için ilgili kanallar, SRF ve kalibrasyon zorunlu."
+    },
+    {
+      "reference": "S23",
+      "apply_now": "Tespit edilebilirlik ve salım doğruluğunu ayrı tut; geçerli negatif gözlem, eksik veri ve sıfırı ayır.",
+      "conditional": "Bilinen salımlar/enjeksiyonlarla değerlendirme; deneydeki en düşük tespiti evrensel eşik sayma."
+    },
+    {
+      "reference": "S24",
+      "apply_now": "Sensöre ve sahneye bağlı performans, yanlış negatif ve bulut engellerini karşılaştırmada koru.",
+      "conditional": "Farklı uydu sistemlerini bağımsız, yakın zamanlı eşleşmelerle sınama; çalışmadaki tek oranı ülke genelinin güven puanı yapma."
+    },
+    {
+      "reference": "M24",
+      "apply_now": "Aday maske ile insan/ürün doğrulamasını ayır, modele göre örneklem dışı başarımı kayıt altına al.",
+      "conditional": "PRISMethaNet benzeri segmentasyon ancak gerçek ağırlık, eğitim kapsamı, lisans ve bağımsız test varsa etkinleşir."
+    },
+    {
+      "reference": "ME23",
+      "apply_now": "Bulut/aerosol/yüzey ve atmosfer modelinin varsayımlarını yöntem kaydında tut.",
+      "conditional": "SCIATRAN kurulumu, lisansı ve girdi profilleri mevcutsa radyatif transfer; paket kurulmadan çalışıyor deme."
+    },
+    {
+      "reference": "H19",
+      "apply_now": "Soğurma veri tabanı/çizgi şekli/sıcaklık-basınç varsayımlarını kaydet.",
+      "conditional": "HAPI/HITRAN spektroskopisi; tek başına tam atmosferik ışınım aktarımı veya salım hesabı değildir."
+    },
+    {
+      "reference": "PR26",
+      "apply_now": "Depolama sahasında yağış/sıcaklıkla gözlenen birlikteliği nedensel sonuçtan ayır.",
+      "conditional": "Atık miktarı, bileşim, nem, örtü, gaz toplama ve saha girdileri varsa FOD senaryosu; başka bölgenin senaryo sonucunu tek sahaya aktarma."
+    }
+  ]
+}

@@ -10,6 +10,8 @@ import math
 import re
 from datetime import datetime
 
+from . import acquisition, quantities
+
 # Carbon Mapper alan adları: https://api.carbonmapper.org/api/v1/docs (01.11.2026 tarihli canlı yanıtla doğrulandı)
 CM_PROVIDER = "Carbon Mapper"
 CM_SENSORS = {"tan": "Planet Tanager-1", "emi": "NASA EMIT (ISS)"}
@@ -111,6 +113,8 @@ def normalize_cm_plume(p, ingested_at=None):
         }
 
     instrument = _text(p.get("instrument"))
+    method_version = ":".join(x for x in ("cm", _text(p.get("emission_cmf_type")) or _text(p.get("cmf_type")),
+                                          _text(p.get("emission_version"))) if x)
     version = " · ".join(x for x in (
         _text(p.get("collection")),
         f"emisyon {p['emission_version']}" if _text(p.get("emission_version")) else None,
@@ -149,7 +153,25 @@ def normalize_cm_plume(p, ingested_at=None):
         "sector": _sector(p.get("sector")),
         "sectorCode": _text(p.get("sector")),
         "validObservationConfirmed": False,
+        "acquisitionId": acquisition.from_cm(pid, instrument, _text(p.get("scene_id"))),
+        "methodVersion": method_version,
+        "measurement": quantities.measurement(
+            quantities.EMISSION_RATE, value, "kg/h",
+            uncertainty=((emission or {}).get("uncertainty") or {}).get("value"),
+            uncertainty_kind=quantities.UNSPECIFIED) if value is not None else None,
+        "providerWind": _provider_wind(p),
+        # Sayısal artış ürünü (GeoTIFF). Bağlantı imzalı ve sürelidir; kalıcı arşiv sayılmaz.
+        "numericRaster": {"url": _text(p.get("con_tif")), "product": "Carbon Mapper L3A IME CMF konsantrasyon",
+                          "unitInFile": None} if _text(p.get("con_tif")) else None,
     }
+
+
+def _provider_wind(p):
+    speed = parse_number(p.get("wind_speed_avg_auto"))
+    if speed is None or speed < 0:
+        return None
+    return {"speed": speed, "from": parse_number(p.get("wind_direction_avg_auto")), "unit": "m/s",
+            "source": "Carbon Mapper otomatik ortalama (wind_*_avg_auto); kaynağı ve yüksekliği kayıtta belirtilmemiş"}
 
 
 def normalize_cm_source(feature):

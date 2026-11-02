@@ -120,6 +120,50 @@ def nearest_index(times, target, max_offset_min=MAX_OFFSET_MIN):
     return best, round(best_diff)
 
 
+def interpolate_wind(times, speeds, directions, target, max_offset_min=MAX_OFFSET_MIN):
+    """Hedefi çevreleyen iki geçerli saatlik örnek varsa u/v bileşenlerinde doğrusal interpolasyon.
+    (hız, geldiği yön, taşınma yönü, yöntem) ya da yoksa None. Yön açıları aritmetik ortalanmaz."""
+    parsed = [(parse_utc(t) if isinstance(t, str) else t, s, d) for t, s, d in zip(times, speeds, directions)]
+    before = [p for p in parsed if p[0] and p[0] <= target and _finite(p[1]) and _finite(p[2])]
+    after = [p for p in parsed if p[0] and p[0] >= target and _finite(p[1]) and _finite(p[2])]
+    if not before or not after:
+        return None
+    b, a = max(before, key=lambda p: p[0]), min(after, key=lambda p: p[0])
+    if (target - b[0]).total_seconds() / 60 > max_offset_min or (a[0] - target).total_seconds() / 60 > max_offset_min:
+        return None
+    ub, vb = uv_from_wind(b[1], b[2])
+    ua, va = uv_from_wind(a[1], a[2])
+    span = (a[0] - b[0]).total_seconds()
+    w = 0.0 if span == 0 else (target - b[0]).total_seconds() / span
+    s, f, t = wind_from_uv(ub + w * (ua - ub), vb + w * (va - vb))
+    return {"speed": s, "from": f, "to": t, "calm": f is None, "unit": "m/s",
+            "method": "u/v doğrusal interpolasyon", "bracket": [b[0].isoformat(), a[0].isoformat()], "weight": w}
+
+
+def direction_change(times, directions, speeds, target, hours=1):
+    """Gözlemden ±hours saat önce/sonra geldiği yön farkı (0–180°). Sakin rüzgârda veya veri yoksa None."""
+    parsed = {}
+    for t, d, s in zip(times, directions, speeds):
+        dt = parse_utc(t) if isinstance(t, str) else t
+        if dt is not None:
+            parsed[dt] = (d, s)
+    base = target.replace(minute=0, second=0, microsecond=0)
+    pre, post = parsed.get(base - timedelta(hours=hours - 1)), parsed.get(base + timedelta(hours=hours))
+    if not pre or not post or not all(_finite(x) for x in (*pre, *post)) or min(pre[1], post[1]) < CALM_MS:
+        return None
+    d = abs((post[0] - pre[0]) % 360)
+    return min(d, 360 - d)
+
+
+def precip_prior(times, precip, target, hours):
+    """Gözlem saatine kadar (dahil) son 'hours' saatlik yağış toplamı (mm). Eksik saat varsa None (sıfır sayılmaz)."""
+    idx, _ = nearest_index(times, target)
+    if idx is None or idx - hours + 1 < 0:
+        return None
+    vals = precip[idx - hours + 1: idx + 1]
+    return sum(vals) if len(vals) == hours and all(_finite(v) for v in vals) else None
+
+
 # ---- İklim toplulaştırması ----------------------------------------------------
 
 def hours_in_month(year, month):
